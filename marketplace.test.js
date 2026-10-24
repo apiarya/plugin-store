@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { discoverMarketplace, findMarketplaces, launchLink, marketplaceMatchesTerm, matchesTerm, parseManifest, parseRepository, pluginLinks, searchQuery } from "./marketplace.js";
+import { discoverMarketplace, findMarketplaces, launchLink, marketplaceMatchesTerm, matchesTerm, parseManifest, parseRepository, pluginLinks, searchQueries } from "./marketplace.js";
 
 const example = {
   name: "life-sciences",
@@ -170,8 +170,8 @@ test("page has accessible labels, initially disabled links, no prefilled target,
 });
 
 test("search queries and plugin matching", () => {
-  assert.equal(searchQuery("postgres"), "postgres claude plugin");
-  assert.equal(searchQuery('a:b "c"'), "a b c claude plugin");
+  assert.deepEqual(searchQueries("postgres"), ["postgres claude plugin", "postgres topic:claude-code-plugins"]);
+  assert.deepEqual(searchQueries('a:b "c"'), ["a b c claude plugin", "a b c topic:claude-code-plugins"]);
   assert.ok(matchesTerm({ name: "pg-tools", description: "Postgres helpers" }, "postgres"));
   assert.ok(!matchesTerm({ name: "pg-tools", description: "Postgres helpers" }, "mysql"));
   assert.ok(!matchesTerm({ name: "x", description: "y" }, ""));
@@ -187,12 +187,20 @@ test("findMarketplaces keeps only repositories with valid manifests and ranks ma
     "b/two/trunk/.github/plugin/marketplace.json": { name: "two", plugins: [{ name: "pg", description: "Postgres tools" }] },
     "c/bad/main/.claude-plugin/marketplace.json": { nope: true },
     "f/postgres-hub/main/.claude-plugin/marketplace.json": { name: "hub", plugins: [{ name: "misc" }] },
+    "g/tagged/main/.claude-plugin/marketplace.json": { name: "tagged", plugins: [{ name: "other" }] },
   };
   const results = await findMarketplaces("postgres", {
     fetchImpl: async (url) => {
       requests.push(url);
       if (url.startsWith("https://api.github.com/search/repositories")) {
-        assert.equal(new URL(url).searchParams.get("q"), "postgres claude plugin");
+        const query = new URL(url).searchParams.get("q");
+        if (query === "postgres topic:claude-code-plugins") {
+          return jsonResponse({ items: [
+            { full_name: "B/Two", default_branch: "trunk", stargazers_count: 3 },
+            { full_name: "g/tagged", default_branch: "main", stargazers_count: 50 },
+          ] });
+        }
+        assert.equal(query, "postgres claude plugin");
         return jsonResponse({ items: [
           { full_name: "a/one", default_branch: "main", stargazers_count: 9, description: "First" },
           { full_name: "b/two", default_branch: "trunk", stargazers_count: 3 },
@@ -206,9 +214,18 @@ test("findMarketplaces keeps only repositories with valid manifests and ranks ma
       return key in manifests ? jsonResponse(manifests[key]) : jsonResponse({}, 404);
     },
   });
-  assert.deepEqual(results.map((item) => [item.repository, item.name, item.stars]), [["f/postgres-hub", "hub", 1], ["b/two", "two", 3], ["a/one", "one", 9]]);
-  assert.equal(results[2].description, "First");
+  assert.deepEqual(results.map((item) => [item.repository, item.name, item.stars]), [["f/postgres-hub", "hub", 1], ["b/two", "two", 3], ["g/tagged", "tagged", 50], ["a/one", "one", 9]]);
+  assert.equal(results[3].description, "First");
+  assert.equal(requests.filter((url) => url.includes("raw.githubusercontent.com/B/Two")).length, 0);
   assert.ok(!requests.some((url) => url.includes("e/private")));
   await assert.rejects(findMarketplaces("x", { fetchImpl: async () => jsonResponse({}, 403, { "x-ratelimit-remaining": "0" }) }), /rate limit/);
+  const partial = await findMarketplaces("x", {
+    fetchImpl: async (url) => {
+      if (url.includes("topic%3Aclaude-code-plugins")) return jsonResponse({}, 403, { "x-ratelimit-remaining": "0" });
+      if (url.startsWith("https://api.github.com/")) return jsonResponse({ items: [{ full_name: "a/one", default_branch: "main" }] });
+      return jsonResponse({ name: "one", plugins: [{ name: "p" }] });
+    },
+  });
+  assert.deepEqual(partial.map((item) => item.repository), ["a/one"]);
   await assert.rejects(findMarketplaces("   "), /Type a word/);
 });
