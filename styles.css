@@ -87,3 +87,12 @@ footer a:hover { text-decoration: underline; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* Launch helper tab */
+body.launch main { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding-bottom: 12vh; }
+body.launch h1 { font-size: 28px; letter-spacing: -.6px; margin: 0 0 10px; }
+body.launch p { color: var(--muted); font-size: 15px; margin: 0; }
+.launch-actions { display: flex; gap: 16px; align-items: center; margin-top: 24px !important; }
+#launch-close { border: 1px solid var(--border); background: #fff; color: #3c4043; border-radius: 20px; padding: 8px 18px; font-size: 13px; cursor: pointer; }
+.launch-button.done .step-number { background: #1e8e3e; border-color: #1e8e3e; opacity: 1; font-size: 0; }
+.launch-button.done .step-number::after { content: "✓"; color: #fff; font-size: 12px; }

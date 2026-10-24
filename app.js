@@ -17,6 +17,31 @@ let results = [];
 let shown = 0;
 let controller = null;
 let retryTimer = null;
+let launched = null;
+const launchButtons = ["marketplace-launch", "plugin-launch", "session-launch"].map(byID);
+
+function clearDone() {
+  launchButtons.forEach((link) => link.classList.remove("done"));
+}
+
+launchButtons.forEach((link) => link.addEventListener("click", (event) => {
+  if (!link.href) return;
+  const tab = window.open(link.href, "_blank");
+  if (!tab) return;
+  event.preventDefault();
+  launched = { link, tab };
+}));
+
+function returned() {
+  if (!launched || document.hidden || !document.hasFocus()) return;
+  const { link, tab } = launched;
+  launched = null;
+  tab?.close();
+  link.classList.add("done");
+  launchButtons.slice(launchButtons.indexOf(link) + 1).find((next) => next.href)?.focus();
+}
+window.addEventListener("focus", returned);
+document.addEventListener("visibilitychange", returned);
 
 try {
   target.value = localStorage.getItem(TARGET_KEY) ?? "";
@@ -27,7 +52,8 @@ try {
 function setLink(id, href) {
   const link = byID(id);
   if (href) {
-    link.href = href;
+    link.href = `./launch.html?open=${encodeURIComponent(new URL(href).searchParams.get("open"))}`;
+    link.target = "_blank";
     link.removeAttribute("aria-disabled");
     link.removeAttribute("tabindex");
   } else {
@@ -138,6 +164,7 @@ function render(marketplaces, searched) {
   actions.hidden = true;
   document.body.append(actions);
   options.replaceChildren();
+  clearDone();
   showMore();
   updateLinks();
 }
@@ -187,6 +214,7 @@ form.addEventListener("submit", async (event) => {
 
 options.addEventListener("change", (event) => {
   if (event.target.name !== "result") return;
+  clearDone();
   event.target.closest(".result").append(actions);
   actions.hidden = false;
   updateLinks();

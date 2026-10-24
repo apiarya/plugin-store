@@ -166,6 +166,9 @@ test("page has accessible labels, initially disabled links, no prefilled target,
   assert.ok(!script.includes("eval("));
   assert.match(script, /text\.textContent = description/);
   assert.match(html, /<noscript>/);
+  const helper = await readFile(new URL("./launch.js", import.meta.url), "utf8");
+  assert.match(helper, /open\.startsWith\("ghapp:\/\/"\)/);
+  assert.ok(!helper.includes("innerHTML"));
 });
 
 test("search queries and plugin matching", () => {
