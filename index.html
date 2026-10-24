@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f6f5fb">
+    <meta name="description" content="Find a GitHub marketplace plugin and take it for a spin in the GitHub Copilot desktop app.">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://api.github.com https://raw.githubusercontent.com; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+    <title>Run in Copilot — Discover your next plugin</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="./styles.css">
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="Run in Copilot home"><span class="brand-mark" aria-hidden="true">↗</span> Run in Copilot</a>
+      <a class="quiet-link" href="https://github.com/apiarya/run-in-copilot">View on GitHub <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div class="eyebrow"><span class="status-dot" aria-hidden="true"></span> A little discovery. A lot of possibility.</div>
+        <h1 id="page-title">Your next plugin.<br><span>One place to start.</span></h1>
+        <p class="intro-copy">Find a marketplace, pick a plugin, and bring a new capability to the GitHub Copilot desktop app.</p>
+      </section>
+
+      <div class="workspace">
+        <section class="card picker" aria-labelledby="discover-title">
+          <div class="section-heading"><span class="label-icon" aria-hidden="true">⌘</span><div><h2 id="discover-title">Find your plugin</h2><p>Start with a marketplace you know, or explore a favorite.</p></div></div>
+          <form id="marketplace-form">
+            <label for="marketplace-preset">Marketplace</label>
+            <select id="marketplace-preset">
+              <option value="anthropics/life-sciences">Life Sciences · anthropics/life-sciences</option>
+              <option value="microsoft/work-iq">Work IQ · microsoft/work-iq</option>
+              <option value="">Custom GitHub marketplace</option>
+            </select>
+            <label for="marketplace-source">Marketplace repository</label>
+            <div class="input-action">
+              <input id="marketplace-source" name="marketplace" value="anthropics/life-sciences" placeholder="owner/repository or GitHub URL" required autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="source-help">
+              <button id="discover-button" type="submit">Find plugins <span aria-hidden="true">→</span></button>
+            </div>
+            <p class="field-help" id="source-help">Public GitHub repositories only. Plugin names come from the marketplace manifest.</p>
+          </form>
+          <div id="discovery-status" class="notice" role="status" aria-live="polite" aria-atomic="true">Choose a marketplace, then select Find plugins.</div>
+          <div id="plugin-fields" hidden>
+            <div class="field-heading"><label for="plugin-select">Plugin</label><a id="manifest-link" class="small-link" target="_blank" rel="noopener noreferrer">View manifest ↗</a></div>
+            <select id="plugin-select" aria-describedby="plugin-description"></select>
+            <div class="plugin-detail">
+              <span class="plugin-glyph" aria-hidden="true">✦</span>
+              <div><h3 id="plugin-name"></h3><p id="plugin-description"></p><code id="plugin-id"></code></div>
+            </div>
+          </div>
+          <div class="privacy-note"><span aria-hidden="true">◇</span><p>No sign-in. No tokens. Marketplace data is fetched directly from GitHub in your browser.</p></div>
+        </section>
+
+        <section class="card launchpad" aria-labelledby="launch-title">
+          <div class="section-heading"><span class="label-icon purple" aria-hidden="true">↗</span><div><h2 id="launch-title">Take it for a spin</h2><p>Three steps. You stay in control.</p></div></div>
+          <ol class="steps">
+            <li>
+              <span class="step-number" aria-hidden="true">1</span>
+              <div class="step-content"><h3>Add the marketplace</h3><p>Review and confirm the marketplace in Copilot.</p><a id="marketplace-launch" class="launch-button" aria-disabled="true" tabindex="-1">Add marketplace <span aria-hidden="true">↗</span></a></div>
+            </li>
+            <li>
+              <span class="step-number" aria-hidden="true">2</span>
+              <div class="step-content"><h3>Install your plugin</h3><p>Review the plugin and confirm its installation.</p><a id="plugin-launch" class="launch-button" aria-disabled="true" tabindex="-1">Install plugin <span aria-hidden="true">↗</span></a></div>
+            </li>
+            <li>
+              <span class="step-number" aria-hidden="true">3</span>
+              <div class="step-content"><h3>Start a conversation</h3><p>Choose the repository you want to work in, not the marketplace source.</p>
+                <label for="target-repo">Your target repository</label>
+                <input id="target-repo" placeholder="owner/your-project" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="target-help target-error">
+                <p class="field-help" id="target-help">Required by Copilot to open a new interactive session.</p>
+                <p id="target-error" class="field-error" aria-live="polite"></p>
+                <a id="session-launch" class="launch-button primary" aria-disabled="true" tabindex="-1">Ask “What can you do?” <span aria-hidden="true">↗</span></a>
+              </div>
+            </li>
+          </ol>
+          <details id="prompt-details" hidden><summary>Preview your opening prompt</summary><p id="prompt-preview"></p></details>
+          <p class="launch-note">Links open the <a href="https://github.com/copilot">GitHub Copilot desktop app</a>. Finish each confirmation there before continuing. This page cannot check installation status or force a plugin to activate; the opening prompt requests its use.</p>
+        </section>
+      </div>
+      <noscript><p class="notice error">JavaScript is required to fetch marketplace manifests and create the Copilot launch links. Enable JavaScript to use this page.</p></noscript>
+      <footer><span>Discover. Install. Ask something.</span><a href="https://docs.github.com/en/copilot/how-tos/github-copilot-app/open-with-deep-links">How Copilot links work ↗</a><span>Independent project. Not affiliated with GitHub.</span></footer>
+    </main>
+  </body>
+</html>
