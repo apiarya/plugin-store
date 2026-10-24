@@ -16,6 +16,7 @@ const more = byID("more-results");
 const actions = byID("actions");
 const marketplaceFilter = byID("marketplace-filter");
 const marketplacePlugins = byID("marketplace-plugins");
+const pluginShareControls = byID("plugin-share-controls");
 const resultSort = byID("result-sort");
 let foundMarketplaces = [];
 let searchedTerm = "";
@@ -122,6 +123,53 @@ function option(marketplace) {
 
 const selected = () => results.find(({ marketplace }) => marketplace === activeMarketplace);
 
+const shareControls = ["marketplace", "plugin"].map((kind) => {
+  const copyButton = byID(`copy-${kind}-link`);
+  const label = copyButton.querySelector(".share-label");
+  const feedback = byID(`${kind}-share-status`);
+  let timer = null;
+  let revision = 0;
+  function reset() {
+    clearTimeout(timer);
+    revision++;
+    label.textContent = "Share";
+    copyButton.classList.remove("is-copied");
+    copyButton.setAttribute("aria-label", `Share ${kind}`);
+    copyButton.disabled = !selected();
+    feedback.textContent = "";
+    feedback.className = "status share-status";
+  }
+  copyButton.addEventListener("click", async () => {
+    if (!selected()) return;
+    reset();
+    const currentRevision = revision;
+    const url = new URL(window.location.href);
+    if (kind === "marketplace") url.searchParams.delete("plugin");
+    copyButton.disabled = true;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(url.href);
+      if (currentRevision !== revision) return;
+      label.textContent = "Link copied";
+      copyButton.classList.add("is-copied");
+      copyButton.setAttribute("aria-label", kind === "marketplace" ? "Marketplace link copied" : "Plugin link copied");
+      feedback.textContent = kind === "marketplace" ? "Marketplace link copied." : "Plugin link copied.";
+      timer = setTimeout(reset, 2000);
+    } catch {
+      if (currentRevision !== revision) return;
+      feedback.className = "status share-status error";
+      feedback.textContent = "Could not copy the link. Select and copy the link below.";
+      const fallback = document.createElement("a");
+      fallback.href = url.href;
+      fallback.textContent = url.href;
+      feedback.append(document.createElement("br"), fallback);
+    } finally {
+      if (currentRevision === revision) copyButton.disabled = false;
+    }
+  });
+  return { reset };
+});
+
 function showProduct(marketplace) {
   form.hidden = true;
   resultsSection.hidden = true;
@@ -154,13 +202,10 @@ function showProduct(marketplace) {
     updated.textContent = `Last push ${formatRelativeTime(marketplace.pushedAt)}`;
   }
   byID("product-topics").replaceChildren(...topicTags(marketplace.topics));
-  const productURL = new URL(window.location.href);
-  productURL.searchParams.set("q", marketplace.repository);
-  productURL.searchParams.set("select", marketplace.repository);
-  window.history.replaceState(null, "", productURL);
 }
 
 function updateLinks() {
+  shareControls.forEach((control) => control.reset());
   const result = selected();
   const plugin = activePlugin ?? result?.plugin;
   const links = result ? pluginLinks(result.marketplace.repository, result.marketplace.name, plugin.name) : null;
@@ -173,6 +218,11 @@ function updateLinks() {
   if (result) {
     byID("manifest-link").href = result.marketplace.manifestURL;
     byID("repository-link").href = `https://github.com/${result.marketplace.repository}`;
+    const productURL = new URL(window.location.href);
+    productURL.searchParams.set("q", result.marketplace.repository);
+    productURL.searchParams.set("select", result.marketplace.repository);
+    productURL.searchParams.set("plugin", plugin.name);
+    window.history.replaceState(null, "", productURL);
   }
 }
 
@@ -195,6 +245,9 @@ function renderMarketplace() {
 }
 
 function renderPluginPage() {
+  shareControls[1].reset();
+  pluginShareControls.hidden = true;
+  byID("marketplace-browser").append(pluginShareControls);
   marketplacePlugins.replaceChildren();
   const start = pluginPage * PLUGIN_PAGE_SIZE;
   const end = Math.min(start + PLUGIN_PAGE_SIZE, filteredPlugins.length);
@@ -208,6 +261,8 @@ function renderPluginPage() {
     ? `${filteredPlugins.length} of ${marketplace.plugins.length} ${marketplace.plugins.length === 1 ? "plugin" : "plugins"}`
     : "No matching plugins";
   for (const plugin of filteredPlugins.slice(start, end)) {
+    const card = document.createElement("div");
+    card.className = "plugin-choice-card";
     const choice = document.createElement("button");
     choice.type = "button";
     choice.className = "marketplace-choice";
@@ -234,26 +289,37 @@ function renderPluginPage() {
     content.append(heading, description);
     const marker = document.createElement("span");
     marker.className = "choice-marker";
-    choice.append(content, marker);
+    heading.append(marker);
+    choice.append(content);
     choice.addEventListener("click", () => {
       activePlugin = plugin;
+      byID("plugin-link-status").hidden = true;
       clearDone();
       updateLinks();
       updateMarketplaceSelection();
       highlightStep();
       byID("marketplace-launch").focus();
     });
-    marketplacePlugins.append(choice);
+    card.append(choice);
+    marketplacePlugins.append(card);
   }
   updateMarketplaceSelection();
 }
 
 function updateMarketplaceSelection() {
   const plugin = activePlugin ?? selected()?.plugin;
-  for (const choice of marketplacePlugins.children) {
+  pluginShareControls.hidden = true;
+  byID("marketplace-browser").append(pluginShareControls);
+  for (const card of marketplacePlugins.children) {
+    const choice = card.querySelector(".marketplace-choice");
     const checked = choice.dataset.plugin === plugin?.name;
+    card.classList.toggle("selected", checked);
     choice.setAttribute("aria-pressed", String(checked));
     choice.querySelector(".choice-marker").textContent = checked ? "Selected ✓" : "Select";
+    if (checked) {
+      pluginShareControls.hidden = false;
+      card.append(pluginShareControls);
+    }
   }
 }
 
@@ -298,8 +364,12 @@ form.addEventListener("submit", async (event) => {
   const searchURL = new URL(window.location.href);
   const requestedSelection = searchURL.searchParams.get("select")?.trim();
   const selectRepository = requestedSelection?.toLowerCase() === searched.toLowerCase() ? requestedSelection : null;
+  const requestedPlugin = selectRepository ? searchURL.searchParams.get("plugin") : null;
   directSelection = Boolean(selectRepository);
-  if (!selectRepository) searchURL.searchParams.delete("select");
+  if (!selectRepository) {
+    searchURL.searchParams.delete("select");
+    searchURL.searchParams.delete("plugin");
+  }
   searchURL.searchParams.set("q", searched);
   window.history.replaceState(null, "", searchURL);
   document.body.classList.replace("home", "searched");
@@ -320,7 +390,7 @@ form.addEventListener("submit", async (event) => {
       : "No marketplaces found.");
     if (selectRepository) {
       const result = results.find(({ marketplace }) => marketplace.repository.toLowerCase() === selectRepository.toLowerCase());
-      if (result) selectMarketplace(result.marketplace);
+      if (result) selectMarketplace(result.marketplace, requestedPlugin);
     }
   } catch (error) {
     if (controller !== requestController) return;
@@ -338,9 +408,12 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
-function selectMarketplace(marketplace) {
+function selectMarketplace(marketplace, requestedPlugin = null) {
   activeMarketplace = marketplace;
-  activePlugin = null;
+  activePlugin = requestedPlugin === null ? null : marketplace.plugins.find((plugin) => plugin.name === requestedPlugin) ?? null;
+  const notice = byID("plugin-link-status");
+  notice.hidden = requestedPlugin === null || Boolean(activePlugin);
+  notice.textContent = notice.hidden ? "" : `The linked plugin "${requestedPlugin}" was not found in this marketplace. Choose a plugin below.`;
   clearDone();
   showProduct(marketplace);
   updateLinks();
@@ -380,6 +453,7 @@ function showStorefront() {
   const homeURL = new URL(window.location.href);
   homeURL.searchParams.delete("q");
   homeURL.searchParams.delete("select");
+  homeURL.searchParams.delete("plugin");
   window.history.replaceState(null, "", homeURL);
   term.focus();
 }
@@ -399,6 +473,7 @@ byID("back-to-results").addEventListener("click", () => {
   const searchURL = new URL(window.location.href);
   searchURL.searchParams.set("q", searchedTerm);
   searchURL.searchParams.delete("select");
+  searchURL.searchParams.delete("plugin");
   window.history.replaceState(null, "", searchURL);
   if (previousRepository) options.querySelector(`[data-repository="${previousRepository}"]`)?.focus();
 });
@@ -412,6 +487,7 @@ initializeStorefront((repository) => {
   term.value = repository;
   const searchURL = new URL(window.location.href);
   searchURL.searchParams.set("select", repository);
+  searchURL.searchParams.delete("plugin");
   window.history.replaceState(null, "", searchURL);
   form.requestSubmit();
 });

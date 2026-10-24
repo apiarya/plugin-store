@@ -40,6 +40,12 @@ Searching also updates the address bar, so you can copy its URL to share the cur
 
 Category selections also set `select=owner%2Frepository` alongside the matching `q` repository query. These URLs select the marketplace through the normal search-result flow and focus **1 Add marketplace**. Other searches retain their normal result-selection behavior.
 
+To link to a specific plugin, add its exact manifest name as `plugin`:
+
+- https://apiarya.github.io/plugin-store/?q=wshobson%2Fagents&select=wshobson%2Fagents&plugin=operating-kit
+
+Use **Share** (the outlined share icon) beside the marketplace title to copy a link to the whole marketplace without a specific plugin selection. Use **Share** inside the selected plugin card to copy that plugin's link. Each button has a context-specific accessible label and tooltip. The plugin share control appears only on the selected card; if filtering or pagination hides that card, it reappears when the card is visible again. Both buttons briefly show **✓ Link copied** on success; if clipboard access is unavailable or denied, the page displays the exact link for manual copying. Selecting a plugin also updates the address bar, so copying the URL preserves the selection. Opening a plugin link shows the selected plugin's page, updates all three Copilot actions, and focuses **1 Add marketplace**. Plugin names are case-sensitive. If the linked plugin is no longer present, the page shows an explicit notice and lets you choose an available plugin. Returning to the store or search clears the plugin parameter.
+
 ## Local development
 
 No dependencies or build step are required. With Node.js 22+ and Python 3:

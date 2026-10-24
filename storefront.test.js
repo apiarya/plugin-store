@@ -100,6 +100,23 @@ test("selected marketplace has an accessible product view with the shared plugin
   }
 });
 
+test("plugin sharing is discoverable and separate from the three installation steps", async () => {
+  const html = await readFile(new URL("./index.html", import.meta.url), "utf8");
+  assert.match(html, /id="copy-plugin-link"[^>]*aria-label="Share plugin"[^>]*title="Copy plugin link"[^>]*disabled>/);
+  assert.doesNotMatch(html, /plugin-share-hint/);
+  assert.match(html, /id="plugin-share-status"[^>]*role="status" aria-live="polite" aria-atomic="true"/);
+  assert.match(html, /id="plugin-share-controls" class="plugin-share-controls" hidden>/);
+  const actionRow = html.match(/<div class="action-row">([\s\S]*?)<\/div>/)[1];
+  assert.equal((actionRow.match(/class="launch-button"/g) ?? []).length, 3);
+  assert.doesNotMatch(actionRow, /copy-plugin-link/);
+  assert.doesNotMatch(actionRow, /copy-marketplace-link/);
+  assert.match(html, /id="copy-marketplace-link"[^>]*aria-label="Share marketplace"[^>]*aria-describedby="marketplace-share-hint"[^>]*disabled>/);
+  assert.match(html, /id="marketplace-share-hint"[^>]*>Share this marketplace so others can browse its plugins\.<\/p>/);
+  assert.match(html, /id="marketplace-share-status"[^>]*role="status" aria-live="polite" aria-atomic="true"/);
+  assert.equal((html.match(/class="share-icon" aria-hidden="true"/g) ?? []).length, 2);
+  assert.equal((html.match(/class="share-label">Share<\/span>/g) ?? []).length, 2);
+});
+
 test("featured and search cards share rendering, safe text, metadata, and selection behavior", (t) => {
   const originalDocument = globalThis.document;
   globalThis.document = {

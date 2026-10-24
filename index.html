@@ -67,8 +67,16 @@
         <header class="product-header">
           <img id="product-avatar" class="product-avatar" alt="" width="72" height="72" decoding="async" referrerpolicy="no-referrer" hidden>
           <div class="product-identity">
-            <h1 id="product-title"></h1>
+            <div class="product-title-row">
+              <h1 id="product-title"></h1>
+              <button id="copy-marketplace-link" class="copy-link" type="button" aria-label="Share marketplace" aria-describedby="marketplace-share-hint" title="Copy marketplace link" disabled>
+                <svg class="share-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M12 15V3m-4 4 4-4 4 4M6 10H4v11h16V10h-2"></path></svg>
+                <span class="share-check" aria-hidden="true">✓</span><span class="share-label">Share</span>
+              </button>
+            </div>
             <a id="product-repository" class="product-repository" target="_blank" rel="noopener noreferrer"></a>
+            <p id="marketplace-share-hint" class="share-hint">Share this marketplace so others can browse its plugins.</p>
+            <p id="marketplace-share-status" class="status share-status" role="status" aria-live="polite" aria-atomic="true"></p>
             <p id="product-description" class="product-description"></p>
             <div class="product-meta">
               <span id="product-plugin-count"></span>
@@ -81,9 +89,17 @@
         <div id="actions" class="actions" hidden>
           <section id="marketplace-browser" class="marketplace-browser" aria-labelledby="marketplace-summary">
             <h2 id="marketplace-summary">Choose a plugin</h2>
+            <p id="plugin-link-status" class="status error" role="status" aria-live="polite" hidden></p>
             <label class="visually-hidden" for="marketplace-filter">Filter marketplace plugins</label>
             <input id="marketplace-filter" type="search" placeholder="Filter plugins in this marketplace" autocomplete="off">
             <div id="marketplace-plugins" class="marketplace-plugins" role="group" aria-label="Marketplace plugins"></div>
+            <div id="plugin-share-controls" class="plugin-share-controls" hidden>
+              <button id="copy-plugin-link" class="copy-link" type="button" aria-label="Share plugin" title="Copy plugin link" disabled>
+                <svg class="share-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M12 15V3m-4 4 4-4 4 4M6 10H4v11h16V10h-2"></path></svg>
+                <span class="share-check" aria-hidden="true">✓</span><span class="share-label">Share</span>
+              </button>
+              <p id="plugin-share-status" class="status share-status" role="status" aria-live="polite" aria-atomic="true"></p>
+            </div>
             <p id="marketplace-count" class="marketplace-count" role="status" aria-live="polite"></p>
             <nav id="plugin-pagination" class="plugin-pagination" aria-label="Plugin pages" hidden>
               <button id="plugin-previous" type="button" aria-controls="marketplace-plugins">Previous</button>
