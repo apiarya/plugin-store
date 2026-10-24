@@ -83,7 +83,7 @@ export function initializeStorefront(onSelect) {
       section.setAttribute("aria-labelledby", `category-${group.id}`);
       const heading = element("h2", "category-title", group.label);
       heading.id = `category-${group.id}`;
-      const grid = element("div", "marketplace-grid", "");
+      const grid = element("div", "marketplace-grid category-row", "");
       const picks = rankedMarketplaces(group.id);
       count += picks.length;
       for (const pick of picks) {

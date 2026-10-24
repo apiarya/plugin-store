@@ -220,7 +220,7 @@ test("page has accessible labels, initially disabled links, and safe rendering",
   assert.match(html, /for="search-term">Find your next plugin<\/label>/);
   assert.match(html, /placeholder="Repository, owner, or keyword"/);
   assert.doesNotMatch(html, /search-guidance|Popular marketplaces, grouped by what you want to do/);
-  assert.match(html, /class="catalog-note">Curated marketplaces &middot; Ranked by GitHub stars &middot; Snapshot: <time id="catalog-date">/);
+  assert.match(html, /class="catalog-note">Curated marketplaces &middot; Snapshot: <time id="catalog-date">/);
   assert.match(html, /class="search-icon" aria-hidden="true"/);
   assert.match(html, /<h2 id="marketplace-summary">Choose a plugin<\/h2>/);
   assert.ok(!html.includes('id="selected-plugin"'));

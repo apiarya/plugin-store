@@ -31,14 +31,14 @@ test("catalog snapshot uses relative days with its exact date available on hover
   }
 });
 
-test("storefront has exactly five categories with three unique marketplaces each", () => {
+test("storefront has five categories with branded Coding, Productivity, and Data & AI rows", () => {
   assert.equal(categories.length, 5);
-  assert.equal(marketplaces.length, 15);
+  assert.equal(marketplaces.length, 34);
   assert.equal(new Set(categories.map(({ id }) => id)).size, 5);
   assert.equal(new Set(marketplaces.map(({ repository }) => repository.toLowerCase())).size, marketplaces.length);
   for (const category of categories) {
     assert.ok(category.label);
-    assert.equal(rankedMarketplaces(category.id).length, 3, category.label);
+    assert.equal(rankedMarketplaces(category.id).length, ({ coding: 7, productivity: 7, "data-ai": 14 })[category.id] ?? 3, category.label);
   }
   assert.ok(marketplaces.every(({ category }) => categories.some(({ id }) => id === category)));
 });
@@ -57,11 +57,34 @@ test("curated marketplaces have numeric star snapshots and supported manifest pr
   }
 });
 
-test("each category ranks marketplaces by numeric stars without mutating the catalog", () => {
+test("Coding, Productivity, and Data & AI keep their curated order and other categories rank by stars without mutating the catalog", () => {
   const original = [...marketplaces];
   for (const { id } of categories) {
     const ranked = rankedMarketplaces(id);
     assert.equal(ranked.length, marketplaces.filter(({ category }) => category === id).length);
+    if (id === "coding") {
+      assert.deepEqual(ranked.map(({ repository }) => repository), [
+        "vercel/next.js", "anthropics/claude-code", "microsoft/skills", "oracle/skills",
+        "stripe/ai", "github/awesome-copilot", "obra/superpowers",
+      ]);
+      continue;
+    }
+    if (id === "data-ai") {
+      assert.deepEqual(ranked.map(({ repository }) => repository), [
+        "huggingface/diffusers", "microsoft/azure-skills", "anthropics/financial-services-plugins",
+        "supabase/agent-skills", "langchain-ai/langchain-skills", "anthropics/skills", "huggingface/skills",
+        "firebase/firebase-tools", "dbt-labs/dbt-agent-skills", "duckdb/duckdb-skills", "elastic/agent-skills",
+        "ClickHouse/agent-skills", "databricks/databricks-agent-skills", "mongodb/agent-skills",
+      ]);
+      continue;
+    }
+    if (id === "productivity") {
+      assert.deepEqual(ranked.map(({ repository }) => repository), [
+        "microsoft/work-iq", "anthropics/knowledge-work-plugins", "makenotion/claude-code-notion-plugin",
+        "OthmanAdi/planning-with-files", "atlassian/atlassian-mcp-server", "github/copilot-plugins", "miroapp/miro-ai",
+      ]);
+      continue;
+    }
     for (let i = 1; i < ranked.length; i++) {
       assert.ok(ranked[i - 1].stars >= ranked[i].stars);
     }
@@ -123,6 +146,10 @@ test("marketplace tiles use real publisher avatars with no letter-icon fallback"
     obra: 45416, wshobson: 553618, github: 9919, anthropics: 76263028,
     othmanadi: 78882424, microsoft: 6154722, trailofbits: 2314423,
     getsentry: 1396951, "k-dense-ai": 238572432,
+    vercel: 14985020, oracle: 4430336, stripe: 856813,
+    makenotion: 4792552, atlassian: 168166, miroapp: 48276018,
+    huggingface: 25720743, firebase: 1335026, supabase: 54469796, "langchain-ai": 126733545,
+    "dbt-labs": 18339788, duckdb: 82039556, elastic: 6764390, clickhouse: 54801242, databricks: 4998052, mongodb: 45120,
   };
   for (const { repository, avatarURL } of marketplaces) {
     const avatar = new URL(avatarURL);
