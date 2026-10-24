@@ -2,7 +2,7 @@ import { findMarketplaces, formatRelativeTime, marketplaceResults, pluginLinks }
 import { createMarketplaceCard, initializeStorefront, topicTags } from "./storefront.js";
 
 const PAGE_SIZE = 20;
-const PLUGIN_PAGE_SIZE = 6;
+const PLUGIN_PAGE_SIZE = 5;
 const byID = (id) => document.getElementById(id);
 const form = byID("search-form");
 const term = byID("search-term");
@@ -153,7 +153,7 @@ const shareControls = ["marketplace", "plugin"].map((kind) => {
       label.textContent = "Link copied";
       copyButton.classList.add("is-copied");
       copyButton.setAttribute("aria-label", kind === "marketplace" ? "Marketplace link copied" : "Plugin link copied");
-      feedback.textContent = kind === "marketplace" ? "Marketplace link copied." : "Plugin link copied.";
+      if (kind === "marketplace") feedback.textContent = "Marketplace link copied.";
       timer = setTimeout(reset, 2000);
     } catch {
       if (currentRevision !== revision) return;
@@ -287,9 +287,6 @@ function renderPluginPage() {
     description.className = "choice-description";
     description.textContent = plugin.description || "No description provided by this marketplace.";
     content.append(heading, description);
-    const marker = document.createElement("span");
-    marker.className = "choice-marker";
-    heading.append(marker);
     choice.append(content);
     choice.addEventListener("click", () => {
       activePlugin = plugin;
@@ -315,7 +312,6 @@ function updateMarketplaceSelection() {
     const checked = choice.dataset.plugin === plugin?.name;
     card.classList.toggle("selected", checked);
     choice.setAttribute("aria-pressed", String(checked));
-    choice.querySelector(".choice-marker").textContent = checked ? "Selected ✓" : "Select";
     if (checked) {
       pluginShareControls.hidden = false;
       card.append(pluginShareControls);
