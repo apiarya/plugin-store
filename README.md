@@ -10,7 +10,7 @@ A single-page, browser-only directory and launcher for public GitHub marketplace
 
 Browse **Coding**, **Productivity**, **Data & AI**, **Security**, and **Research**, or use the storefront search at the top. Category tiles show GitHub publisher avatars and open the same marketplace product view and Copilot actions as search-result cards, without navigating to another page. **Browse categories** or the Plugin Store logo returns to browsing and cancels any pending search.
 
-Selecting a marketplace opens a product-style view at the same width as the storefront, with its publisher avatar, description, repository metadata, plugin chooser, and three Copilot actions. Global search, result counts, and sorting are hidden in this view; the plugin filter remains available. **Search results** returns to the previous search without fetching again, when entered from search, and **Browse categories** returns to the store.
+Selecting a marketplace opens a product-style view at the same width as the storefront, with its publisher avatar, description, repository metadata, plugin chooser, and three Copilot actions. Global search, result counts, and sorting are hidden in this view; the plugin filter remains available. **Search results** returns to the previous search without fetching again, when entered from search. The Plugin Store logo returns to the store.
 
 Each category contains three curated marketplaces with verified manifests, ordered by repository stars within that category. Star and plugin counts are a snapshot from October 24, 2026, not live ratings or an exhaustive ranking. Selecting a marketplace fetches its current metadata and plugins. An avatar identifies its publisher, not a verification badge; plugin compatibility varies.
 

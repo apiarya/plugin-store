@@ -129,6 +129,7 @@ function showProduct(marketplace) {
   product.append(actions);
   actions.hidden = false;
   byID("back-to-results").hidden = directSelection;
+  byID("back-to-results").parentElement.hidden = directSelection;
   byID("product-title").textContent = marketplace.name;
   const repository = byID("product-repository");
   repository.textContent = marketplace.repository;
@@ -384,7 +385,6 @@ function showStorefront() {
 }
 
 byID("browse-all").addEventListener("click", showStorefront);
-byID("product-browse-all").addEventListener("click", showStorefront);
 byID("back-to-results").addEventListener("click", () => {
   const previousRepository = activeMarketplace?.repository;
   activeMarketplace = null;

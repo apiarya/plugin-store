@@ -94,7 +94,7 @@ test("selected marketplace has an accessible product view with the shared plugin
   assert.match(html, /<h1 id="product-title"><\/h1>/);
   assert.match(html, /id="product-avatar"/);
   assert.match(html, /id="back-to-results"/);
-  assert.match(html, /id="product-browse-all"/);
+  assert.doesNotMatch(html, /id="product-browse-all"/);
   for (const id of ["search-form", "actions", "marketplace-browser", "marketplace-launch", "plugin-launch", "session-launch"]) {
     assert.equal(html.split(`id="${id}"`).length - 1, 1, `Expected one shared ${id}`);
   }
