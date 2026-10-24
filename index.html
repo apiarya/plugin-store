@@ -22,6 +22,20 @@
             <input id="search-term" type="search" name="q" autofocus placeholder="Repository, owner, or keyword" required autocomplete="off" autocapitalize="none" spellcheck="false">
             <button id="search-button" type="submit">Search</button>
           </div>
+          <div class="search-examples">
+            <div class="example-row" role="group" aria-label="Search examples">
+              <span class="example-label">Try a search:</span>
+              <button type="button" data-search-example="database" aria-label="Search keyword: database">database</button>
+              <button type="button" data-search-example="vercel" aria-label="Search owner: vercel">vercel</button>
+              <button type="button" data-search-example="oracle/skills" aria-label="Search repository: oracle/skills">oracle/skills</button>
+            </div>
+            <nav class="example-row" aria-label="Plugin deep-link examples">
+              <span class="example-label">Jump to a plugin:</span>
+              <a href="?q=oracle%2Fskills&amp;select=oracle%2Fskills&amp;plugin=db" title="db in oracle/skills">Oracle DB</a>
+              <a href="?q=vercel%2Fnext.js&amp;select=vercel%2Fnext.js&amp;plugin=nextjs" title="nextjs in vercel/next.js">Next.js</a>
+              <a href="?q=huggingface%2Fdiffusers&amp;select=huggingface%2Fdiffusers&amp;plugin=diffusers" title="diffusers in huggingface/diffusers">Diffusers</a>
+            </nav>
+          </div>
         </form>
       </div>
     </header>

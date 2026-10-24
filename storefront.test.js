@@ -80,6 +80,29 @@ test("category cards enter the existing search page with an exact marketplace se
   assert.throws(() => marketplaceURL("https://example.com/untrusted"));
 });
 
+test("homepage examples distinguish runnable searches from plugin deep links", async () => {
+  const html = await readFile(new URL("./index.html", import.meta.url), "utf8");
+  const examples = html.match(/<div class="search-examples">([\s\S]*?)<\/nav>/)[1];
+  assert.match(examples, /aria-label="Search examples"/);
+  for (const [kind, query] of [["keyword", "database"], ["owner", "vercel"], ["repository", "oracle/skills"]]) {
+    assert.ok(examples.includes(`type="button" data-search-example="${query}" aria-label="Search ${kind}: ${query}"`));
+  }
+  const links = [...examples.matchAll(/<a href="([^"]+)"/g)];
+  assert.equal(links.length, 3);
+  for (const [index, [repository, plugin]] of [
+    ["oracle/skills", "db"], ["vercel/next.js", "nextjs"], ["huggingface/diffusers", "diffusers"],
+  ].entries()) {
+    for (const base of ["http://localhost:8000/", "https://apiarya.github.io/plugin-store/"]) {
+      const url = new URL(links[index][1].replaceAll("&amp;", "&"), base);
+      assert.equal(url.origin, new URL(base).origin);
+      assert.equal(url.pathname, new URL(base).pathname);
+      assert.equal(url.searchParams.get("q"), repository);
+      assert.equal(url.searchParams.get("select"), repository);
+      assert.equal(url.searchParams.get("plugin"), plugin);
+    }
+  }
+});
+
 test("storefront and search share one page without a separate install dialog or hero", async () => {
   const [html, script] = await Promise.all([
     readFile(new URL("./index.html", import.meta.url), "utf8"),

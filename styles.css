@@ -38,6 +38,12 @@ main { flex: 1; width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 32px 
 .home .search-box { border-color: #cbb9eb; background: #fff; padding: 7px 7px 7px 16px; }
 .home .search-box input { min-height: 40px; font-size: 16px; }
 .home #search-button { min-height: 40px; font-size: 14px; padding: 0 18px; }
+.search-examples { display: none; }
+.home .search-examples { display: grid; gap: 8px; margin-top: 12px; }
+.example-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+.example-label { margin-right: 2px; color: var(--muted); }
+.example-row button, .example-row a { padding: 5px 9px; border: 1px solid #e4dcef; border-radius: 7px; background: #f4effb; color: var(--purple); font-size: inherit; line-height: 1.4; text-decoration: none; cursor: pointer; }
+.example-row button:hover, .example-row a:hover { border-color: #b8a5df; background: #ece5f9; }
 
 /* Storefront */
 .discover { margin-top: 32px; }

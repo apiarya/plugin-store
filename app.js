@@ -30,7 +30,14 @@ let controller = null;
 let retryTimer = null;
 let launched = null;
 let directSelection = false;
+let restoringHistory = false;
+const searchCache = new Map();
 const launchButtons = ["marketplace-launch", "plugin-launch", "session-launch"].map(byID);
+
+function navigateURL(url, { replace = false, state = null } = {}) {
+  const method = replace || url.href === window.location.href ? "replaceState" : "pushState";
+  window.history[method](state, "", url);
+}
 
 function clearDone() {
   launchButtons.forEach((link) => {
@@ -222,7 +229,7 @@ function updateLinks() {
     productURL.searchParams.set("q", result.marketplace.repository);
     productURL.searchParams.set("select", result.marketplace.repository);
     productURL.searchParams.set("plugin", plugin.name);
-    window.history.replaceState(null, "", productURL);
+    window.history.replaceState(window.history.state, "", productURL);
   }
 }
 
@@ -239,6 +246,11 @@ function renderMarketplace() {
   const result = selected();
   marketplaceFilter.value = "";
   filteredPlugins = result?.marketplace.plugins ?? [];
+  marketplaceFilter.hidden = filteredPlugins.length <= 1;
+  for (const label of marketplaceFilter.labels) label.hidden = marketplaceFilter.hidden;
+  const summary = byID("marketplace-summary");
+  summary.classList.toggle("visually-hidden", marketplaceFilter.hidden);
+  summary.textContent = marketplaceFilter.hidden ? "Plugin" : "Choose a plugin";
   const plugin = activePlugin ?? result?.plugin;
   pluginPage = Math.max(0, Math.floor(filteredPlugins.indexOf(plugin) / PLUGIN_PAGE_SIZE));
   renderPluginPage();
@@ -345,8 +357,18 @@ function render(marketplaces, searched) {
   updateLinks();
 }
 
+form.querySelectorAll("[data-search-example]").forEach((example) => {
+  example.addEventListener("click", () => {
+    term.value = example.dataset.searchExample;
+    form.requestSubmit();
+    term.focus();
+  });
+});
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  const restore = restoringHistory;
+  const restoreState = restore ? window.history.state : null;
   cancelRetry();
   controller?.abort();
   const requestController = new AbortController();
@@ -361,13 +383,13 @@ form.addEventListener("submit", async (event) => {
   const requestedSelection = searchURL.searchParams.get("select")?.trim();
   const selectRepository = requestedSelection?.toLowerCase() === searched.toLowerCase() ? requestedSelection : null;
   const requestedPlugin = selectRepository ? searchURL.searchParams.get("plugin") : null;
-  directSelection = Boolean(selectRepository);
+  directSelection = Boolean(selectRepository) && !(restore && window.history.state?.returnSearch);
   if (!selectRepository) {
     searchURL.searchParams.delete("select");
     searchURL.searchParams.delete("plugin");
   }
   searchURL.searchParams.set("q", searched);
-  window.history.replaceState(null, "", searchURL);
+  navigateURL(searchURL, { replace: restore, state: restore ? window.history.state : null });
   document.body.classList.replace("home", "searched");
   storefront.hidden = true;
   resultsSection.hidden = false;
@@ -376,9 +398,14 @@ form.addEventListener("submit", async (event) => {
   form.setAttribute("aria-busy", "true");
   setStatus("Searching GitHub for plugin marketplaces…");
   try {
-    const found = await findMarketplaces(searched, { signal: requestController.signal });
+    const found = restore && searchCache.has(searched)
+      ? searchCache.get(searched)
+      : await findMarketplaces(searched, { signal: requestController.signal });
     if (controller !== requestController) return;
+    searchCache.set(searched, found);
     render(found, searched);
+    const restoredShown = Math.min(restoreState?.shown ?? 0, results.length);
+    while (shown < restoredShown) showMore();
     const count = results.reduce((total, { marketplace }) => total + marketplace.plugins.length, 0);
     const marketplaceCount = results.length;
     setStatus(marketplaceCount
@@ -386,7 +413,9 @@ form.addEventListener("submit", async (event) => {
       : "No marketplaces found.");
     if (selectRepository) {
       const result = results.find(({ marketplace }) => marketplace.repository.toLowerCase() === selectRepository.toLowerCase());
-      if (result) selectMarketplace(result.marketplace, requestedPlugin);
+      if (result) selectMarketplace(result.marketplace, requestedPlugin, false);
+    } else if (restoreState?.focusRepository) {
+      options.querySelector(`[data-repository="${restoreState.focusRepository}"]`)?.focus();
     }
   } catch (error) {
     if (controller !== requestController) return;
@@ -404,7 +433,12 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
-function selectMarketplace(marketplace, requestedPlugin = null) {
+function selectMarketplace(marketplace, requestedPlugin = null, addHistory = true) {
+  if (addHistory) {
+    window.history.replaceState({ ...window.history.state, shown, focusRepository: marketplace.repository }, "", window.location.href);
+    window.history.pushState({ returnSearch: directSelection ? null : searchedTerm }, "", window.location.href);
+  }
+  searchCache.set(marketplace.repository, [marketplace]);
   activeMarketplace = marketplace;
   activePlugin = requestedPlugin === null ? null : marketplace.plugins.find((plugin) => plugin.name === requestedPlugin) ?? null;
   const notice = byID("plugin-link-status");
@@ -450,12 +484,16 @@ function showStorefront() {
   homeURL.searchParams.delete("q");
   homeURL.searchParams.delete("select");
   homeURL.searchParams.delete("plugin");
-  window.history.replaceState(null, "", homeURL);
+  navigateURL(homeURL);
   term.focus();
 }
 
 byID("browse-all").addEventListener("click", showStorefront);
 byID("back-to-results").addEventListener("click", () => {
+  if (window.history.state?.returnSearch) {
+    window.history.back();
+    return;
+  }
   const previousRepository = activeMarketplace?.repository;
   activeMarketplace = null;
   activePlugin = null;
@@ -482,10 +520,26 @@ byID("home-link").addEventListener("click", (event) => {
 initializeStorefront((repository) => {
   term.value = repository;
   const searchURL = new URL(window.location.href);
+  searchURL.searchParams.set("q", repository);
   searchURL.searchParams.set("select", repository);
   searchURL.searchParams.delete("plugin");
-  window.history.replaceState(null, "", searchURL);
+  navigateURL(searchURL);
   form.requestSubmit();
+});
+
+window.addEventListener("popstate", () => {
+  const query = new URL(window.location.href).searchParams.get("q")?.trim();
+  if (!query) {
+    showStorefront();
+    return;
+  }
+  term.value = query;
+  restoringHistory = true;
+  try {
+    form.requestSubmit();
+  } finally {
+    restoringHistory = false;
+  }
 });
 
 const initialSearch = new URLSearchParams(window.location.search).get("q")?.trim();
