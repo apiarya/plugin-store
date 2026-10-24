@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { discoverMarketplace, launchLink, parseManifest, parseRepository, pluginLinks } from "./marketplace.js";
+import { discoverMarketplace, launchLink, marketplaceSearchQuery, parseManifest, parseRepository, pluginLinks, searchMarketplaces } from "./marketplace.js";
 
 const example = {
   name: "life-sciences",
@@ -168,4 +168,34 @@ test("page has accessible labels, initially disabled links, no prefilled target,
   assert.ok(!script.includes("eval("));
   assert.match(script, /description\.textContent = plugin\.description/);
   assert.match(html, /<noscript>/);
+});
+
+test("marketplace search queries are scoped to the plugin topic", () => {
+  assert.equal(marketplaceSearchQuery(""), "topic:claude-code-plugins");
+  assert.equal(marketplaceSearchQuery("life sciences"), "life sciences topic:claude-code-plugins");
+  assert.equal(marketplaceSearchQuery("anthropics/"), "user:anthropics topic:claude-code-plugins");
+  assert.equal(marketplaceSearchQuery("https://github.com/anthropics/life"), "user:anthropics life in:name topic:claude-code-plugins");
+  assert.equal(marketplaceSearchQuery("a:b \"c\""), "a b c topic:claude-code-plugins");
+});
+
+test("searchMarketplaces returns public repositories and surfaces rate limits", async () => {
+  let requested;
+  const results = await searchMarketplaces("skills", {
+    fetchImpl: async (url) => {
+      requested = new URL(url);
+      return jsonResponse({ items: [
+        { full_name: "owner/market", description: "Plugins", stargazers_count: 5 },
+        { full_name: "owner/secret", private: true },
+        { name: "missing" },
+      ] });
+    },
+  });
+  assert.equal(requested.searchParams.get("q"), "skills topic:claude-code-plugins");
+  assert.equal(requested.searchParams.get("sort"), "stars");
+  assert.deepEqual(results, [{ repository: "owner/market", description: "Plugins", stars: 5 }]);
+  assert.deepEqual(await searchMarketplaces("x", { fetchImpl: async () => jsonResponse({}, 422) }), []);
+  await assert.rejects(
+    searchMarketplaces("x", { fetchImpl: async () => jsonResponse({}, 403, { "x-ratelimit-remaining": "0" }) }),
+    /rate limit/,
+  );
 });

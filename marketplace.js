@@ -116,3 +116,39 @@ export function pluginLinks(repository, marketplace, plugin, targetRepository = 
     prompt,
   };
 }
+
+export const MARKETPLACE_TOPIC = "claude-code-plugins";
+
+export function marketplaceSearchQuery(value) {
+  const text = value.trim().replace(/^https?:\/\/github\.com\//i, "");
+  const [owner, ...rest] = text.split("/");
+  const terms = [];
+  if (rest.length && /^[a-zA-Z0-9-]{1,39}$/.test(owner)) {
+    terms.push(`user:${owner}`);
+    const name = rest.join(" ").replace(/[^\w.-]+/g, " ").trim();
+    if (name) terms.push(`${name} in:name`);
+  } else {
+    const words = text.replace(/[^\w.\s-]+/g, " ").replace(/\s+/g, " ").trim();
+    if (words) terms.push(words);
+  }
+  terms.push(`topic:${MARKETPLACE_TOPIC}`);
+  return terms.join(" ");
+}
+
+export async function searchMarketplaces(value, { fetchImpl = fetch, signal, limit = 10 } = {}) {
+  const url = new URL("https://api.github.com/search/repositories");
+  url.searchParams.set("q", marketplaceSearchQuery(value));
+  url.searchParams.set("sort", "stars");
+  url.searchParams.set("per_page", String(limit));
+  const response = await fetchImpl(url.href, { signal, headers: { Accept: "application/vnd.github+json" } });
+  if (response.status === 422) return [];
+  if (!response.ok) throw responseError(response, "Could not search GitHub");
+  const result = await readJSON(response);
+  return (Array.isArray(result.items) ? result.items : [])
+    .filter((item) => typeof item?.full_name === "string" && !item.private)
+    .map((item) => ({
+      repository: item.full_name,
+      description: typeof item.description === "string" ? item.description.slice(0, 200) : "",
+      stars: Number(item.stargazers_count) || 0,
+    }));
+}

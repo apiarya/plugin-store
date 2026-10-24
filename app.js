@@ -1,4 +1,4 @@
-import { discoverMarketplace, launchLink, parseRepository, pluginLinks } from "./marketplace.js";
+import { discoverMarketplace, launchLink, parseRepository, pluginLinks, searchMarketplaces } from "./marketplace.js";
 
 const byID = (id) => document.getElementById(id);
 const form = byID("marketplace-form");
@@ -13,6 +13,12 @@ const targetError = byID("target-error");
 let marketplace = null;
 let controller = null;
 let debounce = null;
+const suggestions = byID("marketplace-presets");
+const presetCount = suggestions.options.length;
+const searchCache = new Map();
+let searchTimer = null;
+let searchController = null;
+let searchPausedUntil = 0;
 
 function setLink(id, href) {
   const link = byID(id);
@@ -139,10 +145,49 @@ async function discover() {
   }
 }
 
+function showSuggestions(results) {
+  while (suggestions.options.length > presetCount) suggestions.lastElementChild.remove();
+  const seen = new Set([...suggestions.options].map((option) => option.value.toLowerCase()));
+  for (const result of results) {
+    if (seen.has(result.repository.toLowerCase())) continue;
+    seen.add(result.repository.toLowerCase());
+    const option = document.createElement("option");
+    option.value = result.repository;
+    option.label = `★ ${result.stars.toLocaleString()}${result.description ? ` · ${result.description}` : ""}`;
+    suggestions.append(option);
+  }
+}
+
+async function suggest(text) {
+  const key = text.trim().toLowerCase();
+  const current = () => key === "" || source.value.trim().toLowerCase() === key;
+  if (searchCache.has(key)) {
+    if (current()) showSuggestions(searchCache.get(key));
+    return;
+  }
+  if (Date.now() < searchPausedUntil) return;
+  searchController?.abort();
+  const requestController = new AbortController();
+  searchController = requestController;
+  try {
+    const results = await searchMarketplaces(text, { signal: requestController.signal });
+    searchCache.set(key, results);
+    if (searchController === requestController && current()) showSuggestions(results);
+  } catch (error) {
+    if (error.name === "AbortError") return;
+    searchPausedUntil = Date.now() + 60000;
+    byID("source-help").textContent = "Suggestions are paused briefly by GitHub's search limit. You can still type any repository.";
+  }
+}
+
 source.addEventListener("input", () => {
   resetDiscovery();
   debounce = setTimeout(discover, 600);
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => suggest(source.value), 400);
 });
+
+source.addEventListener("focus", () => suggest(""), { once: true });
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();

@@ -6,7 +6,7 @@ A single-page, browser-only launcher for public GitHub marketplace plugins in th
 
 ## Use it
 
-1. Choose Life Sciences or Work IQ, or enter a public GitHub repository as `owner/repository` or a repository URL. Select **Add marketplace to GitHub Copilot**; plugins load automatically.
+1. Choose Life Sciences or Work IQ, or enter a public GitHub repository as `owner/repository` or a repository URL. Suggestions come from public repositories tagged `claude-code-plugins` (GitHub's unauthenticated search allows about 10 searches per minute; suggestions pause briefly if the limit is reached). Select **Add marketplace to GitHub Copilot**; plugins load automatically.
 2. Pick a plugin from the marketplace manifest and select **Install plugin in GitHub Copilot**. Each button opens Copilot's confirmation form; confirm the action in the app.
 3. Enter your own target repository, then select **Ask “What can you do?”** to open an interactive session requesting the selected plugin.
 
