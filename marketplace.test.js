@@ -209,23 +209,25 @@ test("query values round-trip special characters without adding parameters", () 
 test("page has accessible labels, initially disabled links, and safe rendering", async () => {
   const html = await readFile(new URL("./index.html", import.meta.url), "utf8");
   const script = await readFile(new URL("./app.js", import.meta.url), "utf8");
+  const cards = await readFile(new URL("./storefront.js", import.meta.url), "utf8");
   for (const id of ["search-term"]) {
     assert.ok(html.includes(`for="${id}"`));
     assert.ok(html.includes(`id="${id}"`));
   }
-  assert.match(html, /<div id="result-options" class="result-list" role="radiogroup"/);
-  assert.match(html, /role="radiogroup" aria-label="Marketplaces"/);
+  assert.match(html, /<div id="result-options" class="marketplace-grid result-list" role="list"/);
+  assert.match(html, /role="list" aria-label="Marketplaces"/);
   assert.match(html, /role="status" aria-live="polite"/);
   assert.match(html, /for="search-term">Search marketplaces by repository, owner, or keyword<\/label>/);
   assert.match(html, /placeholder="Search marketplaces by repository, owner, or keyword"/);
-  assert.match(html, /<h3 id="marketplace-summary">Choose a plugin<\/h3>/);
+  assert.match(html, /<h2 id="marketplace-summary">Choose a plugin<\/h2>/);
   assert.ok(!html.includes('id="selected-plugin"'));
   assert.ok(!html.includes('id="selected-plugin-description"'));
   assert.ok(!html.includes("target-repo"));
   assert.equal((html.match(/aria-disabled="true" tabindex="-1"/g) ?? []).length, 3);
   assert.ok(!script.includes("innerHTML"));
   assert.ok(!script.includes("eval("));
-  assert.match(script, /text\.textContent = description/);
+  assert.match(cards, /node\.textContent = text/);
+  assert.ok(!cards.includes("innerHTML"));
   assert.match(html, /<noscript>/);
   const helper = await readFile(new URL("./launch.js", import.meta.url), "utf8");
   assert.match(helper, /open\.startsWith\("ghapp:\/\/"\)/);
@@ -239,7 +241,7 @@ test("branding and package metadata use Plugin Store", async () => {
   assert.match(html, /<title>Plugin Store — Discover what your agent can do<\/title>/);
   assert.match(html, /aria-label="Plugin Store home"/);
   assert.match(html, /class="brand-name">Plugin <span>Store<\/span>/);
-  assert.match(html, /class="tagline">Discover what your agent can do\.<\/p>/);
+  assert.match(html, /<h1 id="discover-title">Discover plugins<\/h1>/);
   assert.equal(packageJSON.name, "plugin-store");
   assert.match(readme, /^# Plugin Store\n/);
   assert.match(readme, /https:\/\/apiarya\.github\.io\/plugin-store\//);
@@ -251,7 +253,7 @@ test("Pages deployment includes the launch handoff and its dependencies", async 
   const copy = workflow.match(/^\s*cp (.+) _site\/\s*$/m);
   assert.ok(copy, "Expected a static site asset copy step");
   const assets = copy[1].split(/\s+/);
-  for (const asset of ["index.html", "launch.html", "styles.css", "app.js", "launch.js", "marketplace.js", "icon.svg"]) {
+  for (const asset of ["index.html", "launch.html", "styles.css", "app.js", "launch.js", "marketplace.js", "catalog.js", "storefront.js", "icon.svg"]) {
     assert.ok(assets.includes(asset), `Missing deployment asset: ${asset}`);
     await readFile(new URL(`./${asset}`, import.meta.url));
   }

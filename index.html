@@ -12,18 +12,40 @@
     <script type="module" src="./app.js"></script>
   </head>
   <body class="home">
+    <header class="site-header">
+      <div class="header-inner">
+        <a id="home-link" class="brand" href="./" aria-label="Plugin Store home"><span class="brand-mark" aria-hidden="true">↗</span><span class="brand-name">Plugin <span>Store</span></span></a>
+        <form id="search-form" role="search">
+          <label class="visually-hidden" for="search-term">Search marketplaces by repository, owner, or keyword</label>
+          <div class="search-box">
+            <input id="search-term" type="search" name="q" autofocus placeholder="Search marketplaces by repository, owner, or keyword" required autocomplete="off" autocapitalize="none" spellcheck="false">
+            <button id="search-button" type="submit">Search</button>
+          </div>
+        </form>
+      </div>
+    </header>
+
     <main>
-      <form id="search-form" role="search">
-        <a class="brand" href="./" aria-label="Plugin Store home"><span class="brand-mark" aria-hidden="true">↗</span><span class="brand-name">Plugin <span>Store</span></span></a>
-        <label class="visually-hidden" for="search-term">Search marketplaces by repository, owner, or keyword</label>
-        <div class="search-box">
-          <input id="search-term" type="search" name="q" autofocus placeholder="Search marketplaces by repository, owner, or keyword" required autocomplete="off" autocapitalize="none" spellcheck="false">
-          <button id="search-button" type="submit">Search</button>
+      <section id="storefront" class="discover" aria-labelledby="discover-title">
+        <div class="section-heading">
+          <div><h1 id="discover-title">Discover plugins</h1><p>Popular marketplaces, grouped by what you want to do.</p></div>
+          <span id="pick-count" class="pick-count" role="status" aria-live="polite"></span>
         </div>
-        <p class="tagline">Discover what your agent can do.</p>
-      </form>
+        <div class="categories" role="group" aria-label="Filter marketplace categories">
+          <button type="button" data-category="all" aria-pressed="true">All</button>
+          <button type="button" data-category="coding" aria-pressed="false">Coding</button>
+          <button type="button" data-category="productivity" aria-pressed="false">Productivity</button>
+          <button type="button" data-category="data-ai" aria-pressed="false">Data &amp; AI</button>
+          <button type="button" data-category="security" aria-pressed="false">Security</button>
+          <button type="button" data-category="research" aria-pressed="false">Research</button>
+        </div>
+        <p class="catalog-note">Curated picks, ranked by GitHub repository stars. Snapshot: <time id="catalog-date"></time>.</p>
+        <div id="marketplace-sections"></div>
+      </section>
 
       <section id="results" aria-label="Search results" hidden>
+        <button id="browse-all" class="back-to-store" type="button">← Browse categories</button>
+        <div class="section-heading search-heading"><h1>Search results</h1></div>
         <div class="results-toolbar">
           <p id="search-status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
           <div class="sort-control">
@@ -34,30 +56,50 @@
             </select>
           </div>
         </div>
-        <div id="result-options" class="result-list" role="radiogroup" aria-label="Marketplaces"></div>
+        <div id="result-options" class="marketplace-grid result-list" role="list" aria-label="Marketplaces"></div>
         <button id="more-results" class="more" type="button" hidden>More results</button>
       </section>
 
-      <div id="actions" class="actions" hidden>
-        <section id="marketplace-browser" class="marketplace-browser" aria-labelledby="marketplace-summary">
-          <h3 id="marketplace-summary">Choose a plugin</h3>
-          <label class="visually-hidden" for="marketplace-filter">Filter marketplace plugins</label>
-          <input id="marketplace-filter" type="search" placeholder="Filter plugins in this marketplace" autocomplete="off">
-          <div id="marketplace-plugins" class="marketplace-plugins" role="group" aria-label="Marketplace plugins"></div>
-          <p id="marketplace-count" class="marketplace-count" role="status" aria-live="polite"></p>
-          <nav id="plugin-pagination" class="plugin-pagination" aria-label="Plugin pages" hidden>
-            <button id="plugin-previous" type="button" aria-controls="marketplace-plugins">Previous</button>
-            <span id="plugin-page-status" role="status" aria-live="polite"></span>
-            <button id="plugin-next" type="button" aria-controls="marketplace-plugins">Next</button>
-          </nav>
-        </section>
-        <div class="action-row">
-          <a id="marketplace-launch" class="launch-button" aria-disabled="true" tabindex="-1"><span class="step-number" aria-hidden="true">1</span><span class="launch-label"><span>Add marketplace</span><span id="marketplace-launch-name" class="launch-name"></span></span></a>
-          <a id="plugin-launch" class="launch-button" aria-disabled="true" tabindex="-1"><span class="step-number" aria-hidden="true">2</span><span class="launch-label"><span>Install plugin</span><span id="plugin-launch-name" class="launch-name"></span></span></a>
-          <a id="session-launch" class="launch-button" aria-disabled="true" tabindex="-1"><span class="step-number" aria-hidden="true">3</span><span class="launch-label"><span>Ask “What can you do?”</span><span id="session-launch-name" class="launch-name"></span></span></a>
+      <section id="marketplace-product" class="marketplace-product" aria-labelledby="product-title" hidden>
+        <nav class="product-nav" aria-label="Marketplace navigation">
+          <button id="back-to-results" class="back-to-store" type="button" hidden>← Search results</button>
+          <button id="product-browse-all" class="back-to-store" type="button">← Browse categories</button>
+        </nav>
+        <header class="product-header">
+          <img id="product-avatar" class="product-avatar" alt="" width="72" height="72" decoding="async" referrerpolicy="no-referrer" hidden>
+          <div class="product-identity">
+            <h1 id="product-title"></h1>
+            <a id="product-repository" class="product-repository" target="_blank" rel="noopener noreferrer"></a>
+            <p id="product-description" class="product-description"></p>
+            <div class="product-meta">
+              <span id="product-plugin-count"></span>
+              <span id="product-stars"></span>
+              <time id="product-updated" hidden></time>
+            </div>
+            <div id="product-topics" class="result-topics"></div>
+          </div>
+        </header>
+        <div id="actions" class="actions" hidden>
+          <section id="marketplace-browser" class="marketplace-browser" aria-labelledby="marketplace-summary">
+            <h2 id="marketplace-summary">Choose a plugin</h2>
+            <label class="visually-hidden" for="marketplace-filter">Filter marketplace plugins</label>
+            <input id="marketplace-filter" type="search" placeholder="Filter plugins in this marketplace" autocomplete="off">
+            <div id="marketplace-plugins" class="marketplace-plugins" role="group" aria-label="Marketplace plugins"></div>
+            <p id="marketplace-count" class="marketplace-count" role="status" aria-live="polite"></p>
+            <nav id="plugin-pagination" class="plugin-pagination" aria-label="Plugin pages" hidden>
+              <button id="plugin-previous" type="button" aria-controls="marketplace-plugins">Previous</button>
+              <span id="plugin-page-status" role="status" aria-live="polite"></span>
+              <button id="plugin-next" type="button" aria-controls="marketplace-plugins">Next</button>
+            </nav>
+          </section>
+          <div class="action-row">
+            <a id="marketplace-launch" class="launch-button" aria-disabled="true" tabindex="-1"><span class="step-number" aria-hidden="true">1</span><span class="launch-label"><span>Add marketplace</span><span id="marketplace-launch-name" class="launch-name"></span></span></a>
+            <a id="plugin-launch" class="launch-button" aria-disabled="true" tabindex="-1"><span class="step-number" aria-hidden="true">2</span><span class="launch-label"><span>Install plugin</span><span id="plugin-launch-name" class="launch-name"></span></span></a>
+            <a id="session-launch" class="launch-button" aria-disabled="true" tabindex="-1"><span class="step-number" aria-hidden="true">3</span><span class="launch-label"><span>Ask “What can you do?”</span><span id="session-launch-name" class="launch-name"></span></span></a>
+          </div>
+          <p class="actions-note">Confirm in Copilot, then return here. <a id="manifest-link" target="_blank" rel="noopener noreferrer">Manifest ↗</a> · <a id="repository-link" target="_blank" rel="noopener noreferrer">Repo ↗</a></p>
         </div>
-        <p class="actions-note">Confirm in Copilot, then return here. <a id="manifest-link" target="_blank" rel="noopener noreferrer">Manifest ↗</a> · <a id="repository-link" target="_blank" rel="noopener noreferrer">Repo ↗</a></p>
-      </div>
+      </section>
 
       <noscript><p class="status error">JavaScript is required to search GitHub and create the Copilot launch links.</p></noscript>
     </main>
