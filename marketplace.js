@@ -219,7 +219,7 @@ async function readManifest(item, fetchImpl, signal) {
   return null;
 }
 
-export async function findMarketplaces(term, { fetchImpl = fetch, signal, limit = 50 } = {}) {
+export async function findMarketplaces(term, { fetchImpl = fetch, signal, limit = 50, known = [] } = {}) {
   if (term.includes("/")) {
     return [await discoverMarketplace(term, { fetchImpl, signal })];
   }
@@ -227,7 +227,7 @@ export async function findMarketplaces(term, { fetchImpl = fetch, signal, limit 
   const searches = await Promise.allSettled(searchQueries(term).map((query) => searchRepositories(query, fetchImpl, signal, limit)));
   if (searches.every((search) => search.status === "rejected")) throw searches.find((search) => search.reason?.retryAt)?.reason ?? searches[0].reason;
   const seen = new Set();
-  const items = searches.flatMap((search) => search.status === "fulfilled" ? search.value : []).filter((item) => {
+  const items = [...searches.flatMap((search) => search.status === "fulfilled" ? search.value : []), ...known].filter((item) => {
     if (typeof item?.full_name !== "string" || item.private || typeof item.default_branch !== "string" || !item.default_branch) return false;
     const key = item.full_name.toLowerCase();
     if (seen.has(key)) return false;

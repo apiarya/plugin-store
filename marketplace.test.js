@@ -367,5 +367,14 @@ test("findMarketplaces keeps only repositories with valid manifests in GitHub or
     },
   });
   assert.deepEqual(partial.map((item) => item.repository), ["a/one"]);
+  const withKnown = await findMarketplaces("x", {
+    known: [{ full_name: "known/market", default_branch: "main", stargazers_count: 5 }],
+    fetchImpl: async (url) => url.includes("search/repositories")
+      ? jsonResponse({ items: [] })
+      : url.startsWith("https://raw.githubusercontent.com/known/market/main/.claude-plugin/")
+        ? jsonResponse({ name: "known", plugins: [{ name: "p", source: "./p" }] })
+        : jsonResponse({}, 404),
+  });
+  assert.deepEqual(withKnown.map(({ repository, stars }) => [repository, stars]), [["known/market", 5]]);
   await assert.rejects(findMarketplaces("   "), /Type a word/);
 });

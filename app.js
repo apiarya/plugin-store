@@ -1,5 +1,6 @@
 import { findMarketplaces, formatRelativeTime, marketplaceResults, pluginLinks } from "./marketplace.js";
 import { createMarketplaceCard, initializeStorefront, topicTags } from "./storefront.js";
+import { catalogRepositories } from "./catalog.js";
 
 const PAGE_SIZE = 20;
 const PLUGIN_PAGE_SIZE = 5;
@@ -400,7 +401,7 @@ form.addEventListener("submit", async (event) => {
   try {
     const found = restore && searchCache.has(searched)
       ? searchCache.get(searched)
-      : await findMarketplaces(searched, { signal: requestController.signal });
+      : await findMarketplaces(searched, { signal: requestController.signal, known: catalogRepositories(searched) });
     if (controller !== requestController) return;
     searchCache.set(searched, found);
     render(found, searched);

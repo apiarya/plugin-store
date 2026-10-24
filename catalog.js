@@ -6,8 +6,8 @@ export const categories = [
   { id: "coding", label: "Coding", curatedOrder: true },
   { id: "productivity", label: "Productivity", curatedOrder: true },
   { id: "data-ai", label: "Data & AI", curatedOrder: true },
-  { id: "security", label: "Security" },
-  { id: "research", label: "Research" },
+  { id: "security", label: "Security", curatedOrder: true },
+  { id: "research", label: "Research", curatedOrder: true },
 ];
 
 export const marketplaces = [
@@ -152,13 +152,6 @@ export const marketplaces = [
     manifestURL: "https://raw.githubusercontent.com/anthropics/skills/main/.claude-plugin/marketplace.json",
   },
   {
-    category: "data-ai", name: "Hugging Face Skills", repository: "huggingface/skills",
-    avatarURL: "https://avatars.githubusercontent.com/u/25720743?v=4&s=96",
-    description: "Run Hugging Face Hub operations for models, datasets, and Spaces.",
-    stars: 11208, pluginCount: 1,
-    manifestURL: "https://raw.githubusercontent.com/huggingface/skills/main/.claude-plugin/marketplace.json",
-  },
-  {
     category: "data-ai", name: "Firebase", repository: "firebase/firebase-tools",
     avatarURL: "https://avatars.githubusercontent.com/u/1335026?v=4&s=96",
     description: "Firebase MCP server and skills for building and deploying apps.",
@@ -208,11 +201,60 @@ export const marketplaces = [
     manifestURL: "https://raw.githubusercontent.com/mongodb/agent-skills/main/.claude-plugin/marketplace.json",
   },
   {
+    category: "security", name: "Cloudflare", repository: "cloudflare/skills",
+    avatarURL: "https://avatars.githubusercontent.com/u/314135?v=4&s=96",
+    description: "Build and secure apps on Cloudflare Workers, Zero Trust, and the edge.",
+    stars: 3165, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/cloudflare/skills/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "AWS", repository: "awslabs/agent-plugins",
+    avatarURL: "https://avatars.githubusercontent.com/u/3299148?v=4&s=96",
+    description: "AWS plugins for building, securing, and operating cloud workloads.",
+    stars: 927, pluginCount: 8,
+    manifestURL: "https://raw.githubusercontent.com/awslabs/agent-plugins/main/.claude-plugin/marketplace.json",
+  },
+  {
     category: "security", name: "Claude Plugins", repository: "anthropics/claude-plugins-official",
     avatarURL: "https://avatars.githubusercontent.com/u/76263028?v=4&s=96",
     description: "Anthropic's official directory, including API security and code-scanning plugins.",
     stars: 44195, pluginCount: 315,
     manifestURL: "https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "HashiCorp", repository: "hashicorp/agent-skills",
+    avatarURL: "https://avatars.githubusercontent.com/u/761456?v=4&s=96",
+    description: "Terraform and Vault skills for secure infrastructure as code.",
+    stars: 907, pluginCount: 2,
+    manifestURL: "https://raw.githubusercontent.com/hashicorp/agent-skills/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "Bitwarden", repository: "bitwarden/ai-plugins",
+    avatarURL: "https://avatars.githubusercontent.com/u/15990069?v=4&s=96",
+    description: "Security engineering and code review plugins from Bitwarden.",
+    stars: 160, pluginCount: 22,
+    manifestURL: "https://raw.githubusercontent.com/bitwarden/ai-plugins/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "Auth0", repository: "auth0/agent-skills",
+    avatarURL: "https://avatars.githubusercontent.com/u/2824157?v=4&s=96",
+    description: "Add authentication and authorization with Auth0.",
+    stars: 54, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/auth0/agent-skills/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "CrowdStrike", repository: "CrowdStrike/foundry-skills",
+    avatarURL: "https://avatars.githubusercontent.com/u/2446477?v=4&s=96",
+    description: "Build Falcon Foundry apps on the CrowdStrike platform.",
+    stars: 35, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/CrowdStrike/foundry-skills/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "1Password", repository: "1Password/1password-claude-plugin",
+    avatarURL: "https://avatars.githubusercontent.com/u/38230737?v=4&s=96",
+    description: "Manage secrets and credentials with 1Password Developer Environments.",
+    stars: 10, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/1Password/1password-claude-plugin/main/.claude-plugin/marketplace.json",
   },
   {
     category: "security", name: "Trail of Bits", repository: "trailofbits/skills",
@@ -229,18 +271,116 @@ export const marketplaces = [
     manifestURL: "https://raw.githubusercontent.com/getsentry/skills/main/.claude-plugin/marketplace.json",
   },
   {
+    category: "security", name: "Mondoo cnspec", repository: "mondoohq/cnspec",
+    avatarURL: "https://avatars.githubusercontent.com/u/99198514?v=4&s=96",
+    description: "Cloud-native security and compliance scanning with cnspec policies.",
+    stars: 440, pluginCount: 2,
+    manifestURL: "https://raw.githubusercontent.com/mondoohq/cnspec/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "SonarQube", repository: "SonarSource/sonarqube-agent-plugins",
+    avatarURL: "https://avatars.githubusercontent.com/u/545988?v=4&s=96",
+    description: "Code quality and security analysis with SonarQube.",
+    stars: 113, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/SonarSource/sonarqube-agent-plugins/master/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "Clerk", repository: "clerk/skills",
+    avatarURL: "https://avatars.githubusercontent.com/u/49538330?v=4&s=96",
+    description: "Add user authentication and management with Clerk.",
+    stars: 89, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/clerk/skills/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "Zscaler", repository: "zscaler/zscaler-mcp-server",
+    avatarURL: "https://avatars.githubusercontent.com/u/1709408?v=4&s=96",
+    description: "Manage Zscaler zero-trust products such as ZIA and ZPA.",
+    stars: 51, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/zscaler/zscaler-mcp-server/master/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "WorkOS", repository: "workos/skills",
+    avatarURL: "https://avatars.githubusercontent.com/u/47638084?v=4&s=96",
+    description: "Enterprise SSO, directory sync, and authentication with WorkOS.",
+    stars: 45, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/workos/skills/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "Semgrep", repository: "semgrep/guardian",
+    avatarURL: "https://avatars.githubusercontent.com/u/29760937?v=4&s=96",
+    description: "Static analysis security scanning with Semgrep.",
+    stars: 19, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/semgrep/guardian/develop/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "StackHawk", repository: "stackhawk/agent-skills",
+    avatarURL: "https://avatars.githubusercontent.com/u/53230463?v=4&s=96",
+    description: "Dynamic application and API security testing with HawkScan.",
+    stars: 16, pluginCount: 6,
+    manifestURL: "https://raw.githubusercontent.com/stackhawk/agent-skills/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "Endor Labs", repository: "endorlabs/endor-labs-agent-kit",
+    avatarURL: "https://avatars.githubusercontent.com/u/92199924?v=4&s=96",
+    description: "Dependency remediation, SAST triage, and CI/CD posture checks.",
+    stars: 12, pluginCount: 2,
+    manifestURL: "https://raw.githubusercontent.com/endorlabs/endor-labs-agent-kit/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "GitGuardian", repository: "GitGuardian/agent-skills",
+    avatarURL: "https://avatars.githubusercontent.com/u/27360172?v=4&s=96",
+    description: "Detect leaked secrets with ggshield.",
+    stars: 11, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/GitGuardian/agent-skills/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "Socket", repository: "SocketDev/sauce",
+    avatarURL: "https://avatars.githubusercontent.com/u/69326764?v=4&s=96",
+    description: "Supply-chain security: scan, inspect, and fix risky dependencies.",
+    stars: 3, pluginCount: 14,
+    manifestURL: "https://raw.githubusercontent.com/SocketDev/sauce/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "Palo Alto Networks", repository: "PaloAltoNetworks/AppSecMCP",
+    avatarURL: "https://avatars.githubusercontent.com/u/4855743?v=4&s=96",
+    description: "Cortex AppSec security gateway for AI coding agents.",
+    stars: 2, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/PaloAltoNetworks/AppSecMCP/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "security", name: "Checkmarx", repository: "Checkmarx/cx-agentic-ai",
+    avatarURL: "https://avatars.githubusercontent.com/u/15811295?v=4&s=96",
+    description: "Agentic application security testing (SAST and SCA).",
+    stars: 0, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/Checkmarx/cx-agentic-ai/master/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "AI Research Skills", repository: "Orchestra-Research/AI-Research-SKILLs",
+    avatarURL: "https://avatars.githubusercontent.com/u/255636098?v=4&s=96",
+    description: "A large library of AI research and ML engineering skills.",
+    stars: 13907, pluginCount: 23,
+    manifestURL: "https://raw.githubusercontent.com/Orchestra-Research/AI-Research-SKILLs/main/.claude-plugin/marketplace.json",
+  },
+  {
     category: "research", name: "Claude for Legal", repository: "anthropics/claude-for-legal",
     avatarURL: "https://avatars.githubusercontent.com/u/76263028?v=4&s=96",
     description: "Legal research, case analysis, and regulatory review workflows.",
-    stars: 9788, pluginCount: 13,
+    stars: 9786, pluginCount: 13,
     manifestURL: "https://raw.githubusercontent.com/anthropics/claude-for-legal/main/.claude-plugin/marketplace.json",
   },
   {
-    category: "research", name: "Scientific Writer", repository: "K-Dense-AI/claude-scientific-writer",
-    avatarURL: "https://avatars.githubusercontent.com/u/238572432?v=4&s=96",
-    description: "Scientific writing workflows for your coding agent.",
-    stars: 2517, pluginCount: 1,
-    manifestURL: "https://raw.githubusercontent.com/K-Dense-AI/claude-scientific-writer/main/.claude-plugin/marketplace.json",
+    category: "research", name: "Perplexity", repository: "perplexityai/modelcontextprotocol",
+    avatarURL: "https://avatars.githubusercontent.com/u/185426709?v=4&s=96",
+    description: "Search and research the web with the official Perplexity API.",
+    stars: 2588, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/perplexityai/modelcontextprotocol/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "Hugging Face Skills", repository: "huggingface/skills",
+    avatarURL: "https://avatars.githubusercontent.com/u/25720743?v=4&s=96",
+    description: "Explore models, datasets, and papers across the Hugging Face Hub.",
+    stars: 11208, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/huggingface/skills/main/.claude-plugin/marketplace.json",
   },
   {
     category: "research", name: "Life Sciences", repository: "anthropics/life-sciences",
@@ -249,12 +389,167 @@ export const marketplaces = [
     stars: 625, pluginCount: 2,
     manifestURL: "https://raw.githubusercontent.com/anthropics/life-sciences/main/.claude-plugin/marketplace.json",
   },
+  {
+    category: "research", name: "NVIDIA BioNeMo", repository: "NVIDIA-BioNeMo/bionemo-agent-toolkit",
+    avatarURL: "https://avatars.githubusercontent.com/u/287038291?v=4&s=96",
+    description: "Life-science expertise and tools powered by NVIDIA BioNeMo.",
+    stars: 496, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/NVIDIA-BioNeMo/bionemo-agent-toolkit/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "Science Superpowers", repository: "K-Dense-AI/science-superpowers",
+    avatarURL: "https://avatars.githubusercontent.com/u/238572432?v=4&s=96",
+    description: "Methodology skills for rigorous computational science.",
+    stars: 361, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/K-Dense-AI/science-superpowers/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "Wolfram", repository: "WolframResearch/AgentTools",
+    avatarURL: "https://avatars.githubusercontent.com/u/11549616?v=4&s=96",
+    description: "Wolfram Language computation and knowledge for agents.",
+    stars: 96, pluginCount: 2,
+    manifestURL: "https://raw.githubusercontent.com/WolframResearch/AgentTools/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "Context7", repository: "upstash/context7",
+    avatarURL: "https://avatars.githubusercontent.com/u/74989412?v=4&s=96",
+    description: "Up-to-date library documentation for coding agents.",
+    stars: 63604, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/upstash/context7/master/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "Exa", repository: "exa-labs/exa-mcp-server",
+    avatarURL: "https://avatars.githubusercontent.com/u/77906174?v=4&s=96",
+    description: "Web search and crawling powered by Exa.",
+    stars: 5164, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/exa-labs/exa-mcp-server/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "Browserbase", repository: "browserbase/skills",
+    avatarURL: "https://avatars.githubusercontent.com/u/158221360?v=4&s=96",
+    description: "Official skills for browsing and accessing the web.",
+    stars: 3742, pluginCount: 6,
+    manifestURL: "https://raw.githubusercontent.com/browserbase/skills/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "arXiv", repository: "blazickjp/arxiv-mcp-server",
+    avatarURL: "https://avatars.githubusercontent.com/u/15390319?v=4&s=96",
+    description: "Search arXiv papers, read LaTeX sources, and export BibTeX.",
+    stars: 3232, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/blazickjp/arxiv-mcp-server/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "Scientific Writer", repository: "K-Dense-AI/claude-scientific-writer",
+    avatarURL: "https://avatars.githubusercontent.com/u/238572432?v=4&s=96",
+    description: "Scientific writing workflows for your coding agent.",
+    stars: 2519, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/K-Dense-AI/claude-scientific-writer/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "Apify", repository: "apify/agent-skills",
+    avatarURL: "https://avatars.githubusercontent.com/u/24586296?v=4&s=96",
+    description: "Web scraping and data extraction skills.",
+    stars: 2457, pluginCount: 6,
+    manifestURL: "https://raw.githubusercontent.com/apify/agent-skills/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "ToolUniverse", repository: "mims-harvard/ToolUniverse",
+    avatarURL: "https://avatars.githubusercontent.com/u/60720343?v=4&s=96",
+    description: "600+ scientific tools for AI scientists, from Harvard MIMS.",
+    stars: 1757, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/mims-harvard/ToolUniverse/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "MATLAB", repository: "matlab/matlab-agentic-toolkit",
+    avatarURL: "https://avatars.githubusercontent.com/u/100243663?v=4&s=96",
+    description: "MATLAB for engineering and scientific workflows.",
+    stars: 1203, pluginCount: 24,
+    manifestURL: "https://raw.githubusercontent.com/matlab/matlab-agentic-toolkit/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "BioMCP", repository: "genomoncology/biomcp",
+    avatarURL: "https://avatars.githubusercontent.com/u/3798408?v=4&s=96",
+    description: "Biomedical literature, clinical trials, and genetic variants.",
+    stars: 662, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/genomoncology/biomcp/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "DAIR.AI Academy", repository: "dair-ai/dair-academy-plugins",
+    avatarURL: "https://avatars.githubusercontent.com/u/30384625?v=4&s=96",
+    description: "Research and learning plugins from DAIR.AI.",
+    stars: 617, pluginCount: 8,
+    manifestURL: "https://raw.githubusercontent.com/dair-ai/dair-academy-plugins/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "Posit", repository: "posit-dev/skills",
+    avatarURL: "https://avatars.githubusercontent.com/u/107264312?v=4&s=96",
+    description: "R and Python data-science skills from Posit.",
+    stars: 547, pluginCount: 8,
+    manifestURL: "https://raw.githubusercontent.com/posit-dev/skills/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "Tavily", repository: "tavily-ai/skills",
+    avatarURL: "https://avatars.githubusercontent.com/u/170207473?v=4&s=96",
+    description: "Web search, extraction, and research with Tavily.",
+    stars: 491, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/tavily-ai/skills/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "Claude for Healthcare", repository: "anthropics/healthcare",
+    avatarURL: "https://avatars.githubusercontent.com/u/76263028?v=4&s=96",
+    description: "Anthropic's healthcare and clinical workflow plugins.",
+    stars: 430, pluginCount: 8,
+    manifestURL: "https://raw.githubusercontent.com/anthropics/healthcare/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "Firecrawl", repository: "firecrawl/firecrawl-claude-plugin",
+    avatarURL: "https://avatars.githubusercontent.com/u/135057108?v=4&s=96",
+    description: "Search the live web, docs, and papers; scrape pages to Markdown.",
+    stars: 247, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/firecrawl/firecrawl-claude-plugin/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "Brave Search", repository: "brave/brave-search-skills",
+    avatarURL: "https://avatars.githubusercontent.com/u/12301619?v=4&s=96",
+    description: "Official Brave Search API skills.",
+    stars: 191, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/brave/brave-search-skills/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "Parallel Web", repository: "parallel-web/parallel-agent-skills",
+    avatarURL: "https://avatars.githubusercontent.com/u/210743255?v=4&s=96",
+    description: "Web search and deep-research skills from Parallel.",
+    stars: 91, pluginCount: 1,
+    manifestURL: "https://raw.githubusercontent.com/parallel-web/parallel-agent-skills/main/.claude-plugin/marketplace.json",
+  },
+  {
+    category: "research", name: "Asta", repository: "allenai/asta-plugins",
+    avatarURL: "https://avatars.githubusercontent.com/u/5667695?v=4&s=96",
+    description: "Scientific research plugins from Allen AI's Semantic Scholar team.",
+    stars: 41, pluginCount: 4,
+    manifestURL: "https://raw.githubusercontent.com/allenai/asta-plugins/main/.claude-plugin/marketplace.json",
+  },
 ];
 
 export function rankedMarketplaces(category) {
   const curated = categories.some(({ id, curatedOrder }) => id === category && curatedOrder);
   return marketplaces.filter((marketplace) => marketplace.category === category)
     .sort((a, b) => curated ? 0 : b.stars - a.stars || a.name.localeCompare(b.name));
+}
+
+export function catalogRepositories(term) {
+  const words = term.toLowerCase().split(/[^\w]+/).filter(Boolean);
+  if (words.length === 0) return [];
+  return marketplaces.filter(({ name, repository, description }) => {
+    const text = `${name} ${repository} ${description}`.toLowerCase();
+    return words.every((word) => text.includes(word));
+  }).map(({ repository, description, stars, avatarURL, manifestURL }) => ({
+    full_name: repository,
+    default_branch: new URL(manifestURL).pathname.split("/")[3],
+    description,
+    stargazers_count: stars,
+    owner: { avatar_url: avatarURL },
+  }));
 }
 
 export function marketplaceURL(repository) {

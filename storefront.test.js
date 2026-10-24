@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { parseRepository } from "./marketplace.js";
-import { categories, marketplaces, marketplaceURL, rankedMarketplaces, snapshotDate } from "./catalog.js";
+import { catalogRepositories, categories, marketplaces, marketplaceURL, rankedMarketplaces, snapshotDate } from "./catalog.js";
 import { createMarketplaceCard, initializeStorefront } from "./storefront.js";
 
 test("catalog snapshot uses relative days with its exact date available on hover", (t) => {
@@ -33,12 +33,12 @@ test("catalog snapshot uses relative days with its exact date available on hover
 
 test("storefront has five categories with branded Coding, Productivity, and Data & AI rows", () => {
   assert.equal(categories.length, 5);
-  assert.equal(marketplaces.length, 34);
+  assert.equal(marketplaces.length, 74);
   assert.equal(new Set(categories.map(({ id }) => id)).size, 5);
   assert.equal(new Set(marketplaces.map(({ repository }) => repository.toLowerCase())).size, marketplaces.length);
   for (const category of categories) {
     assert.ok(category.label);
-    assert.equal(rankedMarketplaces(category.id).length, ({ coding: 7, productivity: 7, "data-ai": 14 })[category.id] ?? 3, category.label);
+    assert.equal(rankedMarketplaces(category.id).length, ({ coding: 7, productivity: 7, "data-ai": 13, security: 22, research: 25 })[category.id], category.label);
   }
   assert.ok(marketplaces.every(({ category }) => categories.some(({ id }) => id === category)));
 });
@@ -48,7 +48,7 @@ test("curated marketplaces have numeric star snapshots and supported manifest pr
   for (const marketplace of marketplaces) {
     assert.equal(parseRepository(marketplace.repository), marketplace.repository);
     assert.ok(marketplace.name && marketplace.description);
-    assert.ok(Number.isSafeInteger(marketplace.stars) && marketplace.stars > 0);
+    assert.ok(Number.isSafeInteger(marketplace.stars) && marketplace.stars >= 0);
     assert.ok(Number.isSafeInteger(marketplace.pluginCount) && marketplace.pluginCount > 0);
     const manifest = new URL(marketplace.manifestURL);
     assert.equal(manifest.origin, "https://raw.githubusercontent.com");
@@ -57,7 +57,7 @@ test("curated marketplaces have numeric star snapshots and supported manifest pr
   }
 });
 
-test("Coding, Productivity, and Data & AI keep their curated order and other categories rank by stars without mutating the catalog", () => {
+test("every category keeps its curated order without mutating the catalog", () => {
   const original = [...marketplaces];
   for (const { id } of categories) {
     const ranked = rankedMarketplaces(id);
@@ -69,10 +69,26 @@ test("Coding, Productivity, and Data & AI keep their curated order and other cat
       ]);
       continue;
     }
+    if (id === "security") {
+      assert.deepEqual(ranked.slice(0, 9).map(({ repository }) => repository), [
+        "cloudflare/skills", "awslabs/agent-plugins", "anthropics/claude-plugins-official", "hashicorp/agent-skills",
+        "bitwarden/ai-plugins", "auth0/agent-skills", "CrowdStrike/foundry-skills", "1Password/1password-claude-plugin",
+        "trailofbits/skills",
+      ]);
+      continue;
+    }
+    if (id === "research") {
+      assert.deepEqual(ranked.slice(0, 9).map(({ repository }) => repository), [
+        "Orchestra-Research/AI-Research-SKILLs", "anthropics/claude-for-legal", "perplexityai/modelcontextprotocol",
+        "huggingface/skills", "anthropics/life-sciences", "NVIDIA-BioNeMo/bionemo-agent-toolkit",
+        "K-Dense-AI/science-superpowers", "WolframResearch/AgentTools", "upstash/context7",
+      ]);
+      continue;
+    }
     if (id === "data-ai") {
       assert.deepEqual(ranked.map(({ repository }) => repository), [
         "huggingface/diffusers", "microsoft/azure-skills", "anthropics/financial-services-plugins",
-        "supabase/agent-skills", "langchain-ai/langchain-skills", "anthropics/skills", "huggingface/skills",
+        "supabase/agent-skills", "langchain-ai/langchain-skills", "anthropics/skills",
         "firebase/firebase-tools", "dbt-labs/dbt-agent-skills", "duckdb/duckdb-skills", "elastic/agent-skills",
         "ClickHouse/agent-skills", "databricks/databricks-agent-skills", "mongodb/agent-skills",
       ]);
@@ -149,7 +165,15 @@ test("marketplace tiles use real publisher avatars with no letter-icon fallback"
     vercel: 14985020, oracle: 4430336, stripe: 856813,
     makenotion: 4792552, atlassian: 168166, miroapp: 48276018,
     huggingface: 25720743, firebase: 1335026, supabase: 54469796, "langchain-ai": 126733545,
-    "dbt-labs": 18339788, duckdb: 82039556, elastic: 6764390, clickhouse: 54801242, databricks: 4998052, mongodb: 45120,
+    "dbt-labs": 18339788,
+    "orchestra-research": 255636098,
+    cloudflare: 314135, awslabs: 3299148, hashicorp: 761456, bitwarden: 15990069, auth0: 2824157,
+    crowdstrike: 2446477, "1password": 38230737, mondoohq: 99198514, sonarsource: 545988, clerk: 49538330,
+    zscaler: 1709408, workos: 47638084, semgrep: 29760937, stackhawk: 53230463, endorlabs: 92199924,
+    gitguardian: 27360172, socketdev: 69326764, paloaltonetworks: 4855743, checkmarx: 15811295, perplexityai: 185426709, "nvidia-bionemo": 287038291, wolframresearch: 11549616,
+    upstash: 74989412, "exa-labs": 77906174, browserbase: 158221360, blazickjp: 15390319, apify: 24586296,
+    "mims-harvard": 60720343, matlab: 100243663, genomoncology: 3798408, "dair-ai": 30384625, "posit-dev": 107264312,
+    "tavily-ai": 170207473, firecrawl: 135057108, brave: 12301619, "parallel-web": 210743255, allenai: 5667695, duckdb: 82039556, elastic: 6764390, clickhouse: 54801242, databricks: 4998052, mongodb: 45120,
   };
   for (const { repository, avatarURL } of marketplaces) {
     const avatar = new URL(avatarURL);
@@ -236,4 +260,15 @@ test("featured and search cards share rendering, safe text, metadata, and select
   assert.deepEqual(selections, [featured.repository, search.repository]);
   const noAvatar = createMarketplaceCard({ ...search, avatarURL: "" }, () => {});
   assert.equal(find(noAvatar, "marketplace-avatar"), undefined);
+});
+
+test("search includes curated marketplaces that GitHub's top results can miss", () => {
+  const microsoft = catalogRepositories("microsoft");
+  assert.deepEqual(microsoft.map(({ full_name }) => full_name).sort(), ["github/copilot-plugins", "microsoft/azure-skills", "microsoft/skills", "microsoft/work-iq"]);
+  for (const item of microsoft) {
+    assert.equal(item.default_branch, "main");
+    assert.match(item.owner.avatar_url, /^https:\/\/avatars\.githubusercontent\.com\//);
+  }
+  assert.equal(catalogRepositories("upstash")[0].default_branch, "master");
+  assert.deepEqual(catalogRepositories("  "), []);
 });
