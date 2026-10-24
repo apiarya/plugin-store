@@ -127,10 +127,18 @@ export function searchQuery(term) {
   return `${words} claude plugin`.trim();
 }
 
-export function matchesTerm(plugin, term) {
+function matchesText(text, term) {
   const words = term.toLowerCase().split(/[^\w]+/).filter(Boolean);
-  const text = `${plugin.name} ${plugin.description}`.toLowerCase();
-  return words.length > 0 && words.every((word) => text.includes(word));
+  const haystack = text.toLowerCase();
+  return words.length > 0 && words.every((word) => haystack.includes(word));
+}
+
+export function matchesTerm(plugin, term) {
+  return matchesText(`${plugin.name} ${plugin.description}`, term);
+}
+
+export function marketplaceMatchesTerm(marketplace, term) {
+  return matchesText(`${marketplace.name} ${marketplace.repository}`, term);
 }
 
 async function readManifest(item, fetchImpl, signal) {
@@ -171,10 +179,14 @@ export async function findMarketplaces(term, { fetchImpl = fetch, signal, limit 
     if (error.name === "AbortError") throw error;
     return null;
   })));
-  const score = (marketplace) => marketplace.plugins.filter((plugin) => matchesTerm(plugin, term)).length;
   return found
     .filter((marketplace) => marketplace && marketplace.plugins.length > 0)
-    .map((marketplace, index) => ({ marketplace, index, matches: score(marketplace) }))
-    .sort((a, b) => b.matches - a.matches || a.index - b.index)
+    .map((marketplace, index) => ({
+      marketplace,
+      index,
+      nameMatch: Number(marketplaceMatchesTerm(marketplace, term)),
+      matches: marketplace.plugins.filter((plugin) => matchesTerm(plugin, term)).length,
+    }))
+    .sort((a, b) => b.nameMatch - a.nameMatch || b.matches - a.matches || a.index - b.index)
     .map(({ marketplace }) => marketplace);
 }

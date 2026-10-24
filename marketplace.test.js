@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { discoverMarketplace, findMarketplaces, launchLink, matchesTerm, parseManifest, parseRepository, pluginLinks, searchQuery } from "./marketplace.js";
+import { discoverMarketplace, findMarketplaces, launchLink, marketplaceMatchesTerm, matchesTerm, parseManifest, parseRepository, pluginLinks, searchQuery } from "./marketplace.js";
 
 const example = {
   name: "life-sciences",
@@ -175,6 +175,9 @@ test("search queries and plugin matching", () => {
   assert.ok(matchesTerm({ name: "pg-tools", description: "Postgres helpers" }, "postgres"));
   assert.ok(!matchesTerm({ name: "pg-tools", description: "Postgres helpers" }, "mysql"));
   assert.ok(!matchesTerm({ name: "x", description: "y" }, ""));
+  assert.ok(marketplaceMatchesTerm({ name: "tools", repository: "acme/postgres-kit" }, "postgres"));
+  assert.ok(marketplaceMatchesTerm({ name: "postgres-hub", repository: "acme/kit" }, "Postgres"));
+  assert.ok(!marketplaceMatchesTerm({ name: "tools", repository: "acme/kit" }, "postgres"));
 });
 
 test("findMarketplaces keeps only repositories with valid manifests and ranks matches first", async () => {
@@ -183,6 +186,7 @@ test("findMarketplaces keeps only repositories with valid manifests and ranks ma
     "a/one/main/.claude-plugin/marketplace.json": { name: "one", plugins: [{ name: "lint" }] },
     "b/two/trunk/.github/plugin/marketplace.json": { name: "two", plugins: [{ name: "pg", description: "Postgres tools" }] },
     "c/bad/main/.claude-plugin/marketplace.json": { nope: true },
+    "f/postgres-hub/main/.claude-plugin/marketplace.json": { name: "hub", plugins: [{ name: "misc" }] },
   };
   const results = await findMarketplaces("postgres", {
     fetchImpl: async (url) => {
@@ -195,14 +199,15 @@ test("findMarketplaces keeps only repositories with valid manifests and ranks ma
           { full_name: "c/bad", default_branch: "main" },
           { full_name: "d/none", default_branch: "main" },
           { full_name: "e/private", default_branch: "main", private: true },
+          { full_name: "f/postgres-hub", default_branch: "main", stargazers_count: 1 },
         ] });
       }
       const key = url.replace("https://raw.githubusercontent.com/", "");
       return key in manifests ? jsonResponse(manifests[key]) : jsonResponse({}, 404);
     },
   });
-  assert.deepEqual(results.map((item) => [item.repository, item.name, item.stars]), [["b/two", "two", 3], ["a/one", "one", 9]]);
-  assert.equal(results[1].description, "First");
+  assert.deepEqual(results.map((item) => [item.repository, item.name, item.stars]), [["f/postgres-hub", "hub", 1], ["b/two", "two", 3], ["a/one", "one", 9]]);
+  assert.equal(results[2].description, "First");
   assert.ok(!requests.some((url) => url.includes("e/private")));
   await assert.rejects(findMarketplaces("x", { fetchImpl: async () => jsonResponse({}, 403, { "x-ratelimit-remaining": "0" }) }), /rate limit/);
   await assert.rejects(findMarketplaces("   "), /Type a word/);

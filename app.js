@@ -1,4 +1,4 @@
-import { findMarketplaces, matchesTerm, parseRepository, pluginLinks } from "./marketplace.js";
+import { findMarketplaces, marketplaceMatchesTerm, matchesTerm, parseRepository, pluginLinks } from "./marketplace.js";
 
 const byID = (id) => document.getElementById(id);
 const form = byID("search-form");
@@ -116,7 +116,8 @@ function renderMarketplaces() {
   marketplaceFields.hidden = results.length === 0;
   results.forEach((marketplace, index) => {
     const count = `${marketplace.plugins.length} ${marketplace.plugins.length === 1 ? "plugin" : "plugins"}`;
-    const meta = [marketplace.repository, marketplace.stars ? `★ ${marketplace.stars.toLocaleString()}` : "", count].filter(Boolean).join(" · ");
+    const matched = marketplaceMatchesTerm(marketplace, searchedTerm) ? "Matches your search" : "";
+    const meta = [marketplace.repository, marketplace.stars ? `★ ${marketplace.stars.toLocaleString()}` : "", count, matched].filter(Boolean).join(" · ");
     marketplaceOptions.append(option("marketplace", marketplace.repository, marketplace.name, meta, marketplace.description, index === 0));
   });
   renderPlugins();
