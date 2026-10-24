@@ -27,18 +27,21 @@
           <li class="step" id="step-marketplace">
             <span class="step-number" aria-hidden="true">1</span>
             <div class="step-content">
-              <h2>Choose a marketplace</h2>
-              <p>Pick a favorite or type any public GitHub marketplace.</p>
-              <form id="marketplace-form">
-                <label for="marketplace-source">Marketplace</label>
-                <input id="marketplace-source" name="marketplace" list="marketplace-presets" value="anthropics/life-sciences" placeholder="Select or type owner/repository" required autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="source-help source-error">
-                <datalist id="marketplace-presets">
-                  <option value="anthropics/life-sciences" label="Life Sciences"></option>
-                  <option value="microsoft/work-iq" label="Work IQ"></option>
-                </datalist>
-                <p class="field-help" id="source-help">Pick a suggestion or type any public GitHub repository or URL.</p>
-                <p id="source-error" class="field-error" aria-live="polite"></p>
+              <h2>Find a marketplace</h2>
+              <p>Search plugin marketplaces on GitHub by any word, or enter owner/repository.</p>
+              <form id="search-form" role="search">
+                <label for="search-term">Search</label>
+                <div class="input-action">
+                  <input id="search-term" type="search" name="q" placeholder="security, postgres, testing…" required autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="search-help">
+                  <button id="search-button" type="submit">Search</button>
+                </div>
+                <p class="field-help" id="search-help">Only repositories with a marketplace manifest are shown.</p>
               </form>
+              <div id="search-status" class="notice" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+              <div id="marketplace-fields" hidden>
+                <span id="marketplace-label" class="list-label">Marketplace</span>
+                <div id="marketplace-options" class="option-list" role="radiogroup" aria-labelledby="marketplace-label"></div>
+              </div>
               <a id="marketplace-launch" class="launch-button primary" aria-disabled="true" tabindex="-1">Add marketplace to GitHub Copilot <span aria-hidden="true">↗</span></a>
             </div>
           </li>
@@ -46,11 +49,10 @@
             <span class="step-number" aria-hidden="true">2</span>
             <div class="step-content">
               <h2>Pick a plugin</h2>
-              <p>Plugins come from the marketplace manifest.</p>
-              <div id="discovery-status" class="notice" role="status" aria-live="polite" aria-atomic="true">Choose a marketplace to see its plugins.</div>
-              <div id="plugin-fields" class="plugin-list" hidden>
+              <p>Plugins matching your search are listed first.</p>
+              <div id="plugin-fields" hidden>
                 <div class="field-heading"><span id="plugin-label" class="list-label">Plugin</span><a id="manifest-link" class="small-link" target="_blank" rel="noopener noreferrer">View manifest ↗</a></div>
-                <div id="plugin-options" role="radiogroup" aria-labelledby="plugin-label"></div>
+                <div id="plugin-options" class="option-list" role="radiogroup" aria-labelledby="plugin-label"></div>
               </div>
               <a id="plugin-launch" class="launch-button primary" aria-disabled="true" tabindex="-1">Install plugin in GitHub Copilot <span aria-hidden="true">↗</span></a>
             </div>

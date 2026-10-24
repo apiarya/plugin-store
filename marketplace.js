@@ -92,7 +92,11 @@ export async function discoverMarketplace(value, { fetchImpl = fetch, signal } =
     const response = await fetchImpl(url, { signal });
     if (response.status === 404) continue;
     if (!response.ok) throw responseError(response, "Could not load the marketplace manifest");
-    return { ...parseManifest(await readJSON(response)), repository, manifestURL: url };
+    return {
+      ...parseManifest(await readJSON(response)), repository, manifestURL: url,
+      description: typeof metadata.description === "string" ? metadata.description.slice(0, 300) : "",
+      stars: Number(metadata.stargazers_count) || 0,
+    };
   }
   throw new Error(`No marketplace manifest found on the default branch. Expected ${MANIFEST_PATHS.join(" or ")}.`);
 }
@@ -117,38 +121,60 @@ export function pluginLinks(repository, marketplace, plugin, targetRepository = 
   };
 }
 
-export const MARKETPLACE_TOPIC = "claude-code-plugins";
 
-export function marketplaceSearchQuery(value) {
-  const text = value.trim().replace(/^https?:\/\/github\.com\//i, "");
-  const [owner, ...rest] = text.split("/");
-  const terms = [];
-  if (rest.length && /^[a-zA-Z0-9-]{1,39}$/.test(owner)) {
-    terms.push(`user:${owner}`);
-    const name = rest.join(" ").replace(/[^\w.-]+/g, " ").trim();
-    if (name) terms.push(`${name} in:name`);
-  } else {
-    const words = text.replace(/[^\w.\s-]+/g, " ").replace(/\s+/g, " ").trim();
-    if (words) terms.push(words);
-  }
-  terms.push(`topic:${MARKETPLACE_TOPIC}`);
-  return terms.join(" ");
+export function searchQuery(term) {
+  const words = term.replace(/[^\w.\s-]+/g, " ").replace(/\s+/g, " ").trim();
+  return `${words} claude plugin`.trim();
 }
 
-export async function searchMarketplaces(value, { fetchImpl = fetch, signal, limit = 10 } = {}) {
+export function matchesTerm(plugin, term) {
+  const words = term.toLowerCase().split(/[^\w]+/).filter(Boolean);
+  const text = `${plugin.name} ${plugin.description}`.toLowerCase();
+  return words.length > 0 && words.every((word) => text.includes(word));
+}
+
+async function readManifest(item, fetchImpl, signal) {
+  const repository = item.full_name;
+  for (const path of MANIFEST_PATHS) {
+    const url = `https://raw.githubusercontent.com/${repository}/${encodeURIComponent(item.default_branch)}/${path}`;
+    const response = await fetchImpl(url, { signal });
+    if (response.status === 404) continue;
+    if (!response.ok) return null;
+    try {
+      return {
+        ...parseManifest(await readJSON(response)), repository, manifestURL: url,
+        description: typeof item.description === "string" ? item.description.slice(0, 300) : "",
+        stars: Number(item.stargazers_count) || 0,
+      };
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+export async function findMarketplaces(term, { fetchImpl = fetch, signal, limit = 20 } = {}) {
+  if (term.includes("/")) {
+    return [await discoverMarketplace(term, { fetchImpl, signal })];
+  }
+  if (!term.trim()) throw new Error("Type a word to search for, such as security or postgres.");
   const url = new URL("https://api.github.com/search/repositories");
-  url.searchParams.set("q", marketplaceSearchQuery(value));
+  url.searchParams.set("q", searchQuery(term));
   url.searchParams.set("sort", "stars");
   url.searchParams.set("per_page", String(limit));
   const response = await fetchImpl(url.href, { signal, headers: { Accept: "application/vnd.github+json" } });
-  if (response.status === 422) return [];
   if (!response.ok) throw responseError(response, "Could not search GitHub");
   const result = await readJSON(response);
-  return (Array.isArray(result.items) ? result.items : [])
-    .filter((item) => typeof item?.full_name === "string" && !item.private)
-    .map((item) => ({
-      repository: item.full_name,
-      description: typeof item.description === "string" ? item.description.slice(0, 200) : "",
-      stars: Number(item.stargazers_count) || 0,
-    }));
+  const items = (Array.isArray(result.items) ? result.items : []).filter((item) =>
+    typeof item?.full_name === "string" && !item.private && typeof item.default_branch === "string" && item.default_branch);
+  const found = await Promise.all(items.map((item) => readManifest(item, fetchImpl, signal).catch((error) => {
+    if (error.name === "AbortError") throw error;
+    return null;
+  })));
+  const score = (marketplace) => marketplace.plugins.filter((plugin) => matchesTerm(plugin, term)).length;
+  return found
+    .filter((marketplace) => marketplace && marketplace.plugins.length > 0)
+    .map((marketplace, index) => ({ marketplace, index, matches: score(marketplace) }))
+    .sort((a, b) => b.matches - a.matches || a.index - b.index)
+    .map(({ marketplace }) => marketplace);
 }

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { discoverMarketplace, launchLink, marketplaceSearchQuery, parseManifest, parseRepository, pluginLinks, searchMarketplaces } from "./marketplace.js";
+import { discoverMarketplace, findMarketplaces, launchLink, matchesTerm, parseManifest, parseRepository, pluginLinks, searchQuery } from "./marketplace.js";
 
 const example = {
   name: "life-sciences",
@@ -153,49 +153,57 @@ test("query values round-trip special characters without adding parameters", () 
 test("page has accessible labels, initially disabled links, no prefilled target, and safe rendering", async () => {
   const html = await readFile(new URL("./index.html", import.meta.url), "utf8");
   const script = await readFile(new URL("./app.js", import.meta.url), "utf8");
-  for (const id of ["marketplace-source", "target-repo"]) {
+  for (const id of ["search-term", "target-repo"]) {
     assert.ok(html.includes(`for="${id}"`));
     assert.ok(html.includes(`id="${id}"`));
   }
-  assert.match(html, /<input id="marketplace-source"[^>]*list="marketplace-presets"/);
-  assert.match(html, /<datalist id="marketplace-presets">/);
-  assert.match(html, /<div id="plugin-options" role="radiogroup"/);
+  assert.match(html, /<div id="marketplace-options" class="option-list" role="radiogroup"/);
+  assert.match(html, /<div id="plugin-options" class="option-list" role="radiogroup"/);
   assert.match(html, /role="status" aria-live="polite"/);
   const targetInput = html.match(/<input id="target-repo"[^>]*>/)[0];
   assert.ok(!targetInput.includes("value="));
   assert.equal((html.match(/aria-disabled="true" tabindex="-1"/g) ?? []).length, 3);
   assert.ok(!script.includes("innerHTML"));
   assert.ok(!script.includes("eval("));
-  assert.match(script, /description\.textContent = plugin\.description/);
+  assert.match(script, /text\.textContent = description/);
   assert.match(html, /<noscript>/);
 });
 
-test("marketplace search queries are scoped to the plugin topic", () => {
-  assert.equal(marketplaceSearchQuery(""), "topic:claude-code-plugins");
-  assert.equal(marketplaceSearchQuery("life sciences"), "life sciences topic:claude-code-plugins");
-  assert.equal(marketplaceSearchQuery("anthropics/"), "user:anthropics topic:claude-code-plugins");
-  assert.equal(marketplaceSearchQuery("https://github.com/anthropics/life"), "user:anthropics life in:name topic:claude-code-plugins");
-  assert.equal(marketplaceSearchQuery("a:b \"c\""), "a b c topic:claude-code-plugins");
+test("search queries and plugin matching", () => {
+  assert.equal(searchQuery("postgres"), "postgres claude plugin");
+  assert.equal(searchQuery('a:b "c"'), "a b c claude plugin");
+  assert.ok(matchesTerm({ name: "pg-tools", description: "Postgres helpers" }, "postgres"));
+  assert.ok(!matchesTerm({ name: "pg-tools", description: "Postgres helpers" }, "mysql"));
+  assert.ok(!matchesTerm({ name: "x", description: "y" }, ""));
 });
 
-test("searchMarketplaces returns public repositories and surfaces rate limits", async () => {
-  let requested;
-  const results = await searchMarketplaces("skills", {
+test("findMarketplaces keeps only repositories with valid manifests and ranks matches first", async () => {
+  const requests = [];
+  const manifests = {
+    "a/one/main/.claude-plugin/marketplace.json": { name: "one", plugins: [{ name: "lint" }] },
+    "b/two/trunk/.github/plugin/marketplace.json": { name: "two", plugins: [{ name: "pg", description: "Postgres tools" }] },
+    "c/bad/main/.claude-plugin/marketplace.json": { nope: true },
+  };
+  const results = await findMarketplaces("postgres", {
     fetchImpl: async (url) => {
-      requested = new URL(url);
-      return jsonResponse({ items: [
-        { full_name: "owner/market", description: "Plugins", stargazers_count: 5 },
-        { full_name: "owner/secret", private: true },
-        { name: "missing" },
-      ] });
+      requests.push(url);
+      if (url.startsWith("https://api.github.com/search/repositories")) {
+        assert.equal(new URL(url).searchParams.get("q"), "postgres claude plugin");
+        return jsonResponse({ items: [
+          { full_name: "a/one", default_branch: "main", stargazers_count: 9, description: "First" },
+          { full_name: "b/two", default_branch: "trunk", stargazers_count: 3 },
+          { full_name: "c/bad", default_branch: "main" },
+          { full_name: "d/none", default_branch: "main" },
+          { full_name: "e/private", default_branch: "main", private: true },
+        ] });
+      }
+      const key = url.replace("https://raw.githubusercontent.com/", "");
+      return key in manifests ? jsonResponse(manifests[key]) : jsonResponse({}, 404);
     },
   });
-  assert.equal(requested.searchParams.get("q"), "skills topic:claude-code-plugins");
-  assert.equal(requested.searchParams.get("sort"), "stars");
-  assert.deepEqual(results, [{ repository: "owner/market", description: "Plugins", stars: 5 }]);
-  assert.deepEqual(await searchMarketplaces("x", { fetchImpl: async () => jsonResponse({}, 422) }), []);
-  await assert.rejects(
-    searchMarketplaces("x", { fetchImpl: async () => jsonResponse({}, 403, { "x-ratelimit-remaining": "0" }) }),
-    /rate limit/,
-  );
+  assert.deepEqual(results.map((item) => [item.repository, item.name, item.stars]), [["b/two", "two", 3], ["a/one", "one", 9]]);
+  assert.equal(results[1].description, "First");
+  assert.ok(!requests.some((url) => url.includes("e/private")));
+  await assert.rejects(findMarketplaces("x", { fetchImpl: async () => jsonResponse({}, 403, { "x-ratelimit-remaining": "0" }) }), /rate limit/);
+  await assert.rejects(findMarketplaces("   "), /Type a word/);
 });

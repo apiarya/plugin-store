@@ -1,24 +1,21 @@
-import { discoverMarketplace, launchLink, parseRepository, pluginLinks, searchMarketplaces } from "./marketplace.js";
+import { findMarketplaces, matchesTerm, parseRepository, pluginLinks } from "./marketplace.js";
 
 const byID = (id) => document.getElementById(id);
-const form = byID("marketplace-form");
-const source = byID("marketplace-source");
-const sourceError = byID("source-error");
-const status = byID("discovery-status");
-const fields = byID("plugin-fields");
-const options = byID("plugin-options");
-const selectedPlugin = () => options.querySelector("input:checked")?.value;
+const form = byID("search-form");
+const term = byID("search-term");
+const button = byID("search-button");
+const status = byID("search-status");
+const marketplaceFields = byID("marketplace-fields");
+const marketplaceOptions = byID("marketplace-options");
+const pluginFields = byID("plugin-fields");
+const pluginOptions = byID("plugin-options");
 const target = byID("target-repo");
 const targetError = byID("target-error");
-let marketplace = null;
+let results = [];
+let searchedTerm = "";
 let controller = null;
-let debounce = null;
-const suggestions = byID("marketplace-presets");
-const presetCount = suggestions.options.length;
-const searchCache = new Map();
-let searchTimer = null;
-let searchController = null;
-let searchPausedUntil = 0;
+
+const checked = (group) => group.querySelector("input:checked")?.value;
 
 function setLink(id, href) {
   const link = byID(id);
@@ -38,25 +35,74 @@ function setStep(id, enabled) {
   else byID(id).setAttribute("aria-disabled", "true");
 }
 
-function validRepository(input, error) {
-  error.textContent = "";
-  input.removeAttribute("aria-invalid");
-  if (!input.value.trim()) return "";
+function setStatus(message, kind = "") {
+  status.hidden = !message;
+  status.className = `notice ${kind}`.trim();
+  status.textContent = message;
+}
+
+function option(group, value, title, meta, description, isChecked) {
+  const label = document.createElement("label");
+  label.className = "option";
+  const radio = document.createElement("input");
+  radio.type = "radio";
+  radio.name = group;
+  radio.value = value;
+  radio.checked = isChecked;
+  const heading = document.createElement("span");
+  heading.className = "option-heading";
+  const name = document.createElement("strong");
+  name.textContent = title;
+  heading.append(name);
+  if (meta) {
+    const extra = document.createElement("small");
+    extra.textContent = meta;
+    heading.append(extra);
+  }
+  const body = document.createElement("span");
+  body.className = "option-body";
+  body.append(heading);
+  if (description) {
+    const text = document.createElement("span");
+    text.textContent = description;
+    body.append(text);
+  }
+  label.append(radio, body);
+  return label;
+}
+
+function targetRepository() {
+  targetError.textContent = "";
+  target.removeAttribute("aria-invalid");
+  if (!target.value.trim()) return "";
   try {
-    return parseRepository(input.value);
-  } catch (err) {
-    error.textContent = err.message;
-    input.setAttribute("aria-invalid", "true");
+    return parseRepository(target.value);
+  } catch (error) {
+    targetError.textContent = error.message;
+    target.setAttribute("aria-invalid", "true");
     return "";
   }
 }
 
+const selectedMarketplace = () => results.find((item) => item.repository === checked(marketplaceOptions));
+
+function renderPlugins() {
+  const marketplace = selectedMarketplace();
+  pluginOptions.replaceChildren();
+  pluginFields.hidden = !marketplace;
+  if (!marketplace) return;
+  byID("manifest-link").href = marketplace.manifestURL;
+  const plugins = [...marketplace.plugins].sort((a, b) => matchesTerm(b, searchedTerm) - matchesTerm(a, searchedTerm));
+  plugins.forEach((plugin, index) => {
+    pluginOptions.append(option("plugin", plugin.name, plugin.name, matchesTerm(plugin, searchedTerm) ? "Matches your search" : "", plugin.description, index === 0));
+  });
+}
+
 function updateLinks() {
-  const repository = validRepository(source, sourceError);
-  setLink("marketplace-launch", repository ? launchLink("plugins/marketplace/add", { source: repository }) : null);
-  const targetRepository = validRepository(target, targetError);
-  const plugin = marketplace?.plugins.find((item) => item.name === selectedPlugin());
-  const links = plugin ? pluginLinks(marketplace.repository, marketplace.name, plugin.name, targetRepository) : null;
+  const marketplace = selectedMarketplace();
+  const plugin = marketplace?.plugins.find((item) => item.name === checked(pluginOptions));
+  const links = plugin ? pluginLinks(marketplace.repository, marketplace.name, plugin.name, targetRepository()) : null;
+  setLink("marketplace-launch", links?.marketplace);
   setLink("plugin-launch", links?.plugin);
   setLink("session-launch", links?.session);
   setStep("step-plugin", Boolean(marketplace));
@@ -65,27 +111,21 @@ function updateLinks() {
   byID("prompt-preview").textContent = links?.prompt ?? "";
 }
 
-function resetDiscovery(message = "Choose a marketplace to see its plugins.") {
-  clearTimeout(debounce);
-  controller?.abort();
-  controller = null;
-  marketplace = null;
-  fields.hidden = true;
-  options.replaceChildren();
-  form.removeAttribute("aria-busy");
-  status.className = "notice";
-  status.textContent = message;
+function renderMarketplaces() {
+  marketplaceOptions.replaceChildren();
+  marketplaceFields.hidden = results.length === 0;
+  results.forEach((marketplace, index) => {
+    const count = `${marketplace.plugins.length} ${marketplace.plugins.length === 1 ? "plugin" : "plugins"}`;
+    const meta = [marketplace.repository, marketplace.stars ? `★ ${marketplace.stars.toLocaleString()}` : "", count].filter(Boolean).join(" · ");
+    marketplaceOptions.append(option("marketplace", marketplace.repository, marketplace.name, meta, marketplace.description, index === 0));
+  });
+  renderPlugins();
   updateLinks();
 }
 
-async function discover() {
-  resetDiscovery();
-  let repository;
-  try {
-    repository = parseRepository(source.value);
-  } catch {
-    return;
-  }
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  controller?.abort();
   const requestController = new AbortController();
   controller = requestController;
   let timedOut = false;
@@ -93,108 +133,42 @@ async function discover() {
     timedOut = true;
     requestController.abort();
   }, 20000);
+  results = [];
+  searchedTerm = term.value.trim();
+  renderMarketplaces();
+  button.disabled = true;
+  button.textContent = "Searching…";
   form.setAttribute("aria-busy", "true");
-  status.textContent = "Reading the marketplace manifest from GitHub…";
+  setStatus("Searching GitHub and checking marketplace manifests…");
   try {
-    const result = await discoverMarketplace(repository, { signal: requestController.signal });
+    const found = await findMarketplaces(searchedTerm, { signal: requestController.signal });
     if (controller !== requestController) return;
-    marketplace = result;
-    byID("manifest-link").href = result.manifestURL;
-    result.plugins.forEach((plugin, index) => {
-      const option = document.createElement("label");
-      option.className = "plugin-option";
-      const radio = document.createElement("input");
-      radio.type = "radio";
-      radio.name = "plugin";
-      radio.value = plugin.name;
-      radio.checked = index === 0;
-      const name = document.createElement("strong");
-      name.textContent = plugin.name;
-      const description = document.createElement("span");
-      description.textContent = plugin.description;
-      const body = document.createElement("span");
-      body.className = "plugin-option-body";
-      body.append(name, description);
-      option.append(radio, body);
-      options.append(option);
-    });
-    if (result.plugins.length === 0) {
-      status.textContent = `The "${result.name}" marketplace has no plugins listed in its manifest. Try another marketplace.`;
+    results = found.filter((marketplace) => marketplace.plugins.length > 0);
+    if (results.length === 0) {
+      setStatus(found.length ? "That marketplace has no plugins listed in its manifest." : `No marketplaces found for “${searchedTerm}”. Try a broader word.`);
     } else {
-      status.className = "notice success";
-      status.textContent = `${result.plugins.length} ${result.plugins.length === 1 ? "plugin" : "plugins"} found in ${result.name}.`;
-      fields.hidden = false;
+      setStatus(`${results.length} ${results.length === 1 ? "marketplace" : "marketplaces"} found. Pick one, then add it to Copilot.`, "success");
     }
-    updateLinks();
+    renderMarketplaces();
   } catch (error) {
     if (controller !== requestController) return;
-    status.className = "notice error";
-    if (timedOut) {
-      status.textContent = "GitHub took too long to respond. Check your connection and try again.";
-    } else if (error instanceof TypeError) {
-      status.textContent = "Could not reach GitHub. Check your connection or browser network restrictions, then try again.";
-    } else {
-      status.textContent = error.message;
-    }
+    if (timedOut) setStatus("GitHub took too long to respond. Check your connection and try again.", "error");
+    else if (error instanceof TypeError) setStatus("Could not reach GitHub. Check your connection or browser network restrictions, then try again.", "error");
+    else setStatus(error.message, "error");
   } finally {
     clearTimeout(timeout);
     if (controller === requestController) {
       controller = null;
       form.removeAttribute("aria-busy");
+      button.disabled = false;
+      button.textContent = "Search";
     }
   }
-}
-
-function showSuggestions(results) {
-  while (suggestions.options.length > presetCount) suggestions.lastElementChild.remove();
-  const seen = new Set([...suggestions.options].map((option) => option.value.toLowerCase()));
-  for (const result of results) {
-    if (seen.has(result.repository.toLowerCase())) continue;
-    seen.add(result.repository.toLowerCase());
-    const option = document.createElement("option");
-    option.value = result.repository;
-    option.label = `★ ${result.stars.toLocaleString()}${result.description ? ` · ${result.description}` : ""}`;
-    suggestions.append(option);
-  }
-}
-
-async function suggest(text) {
-  const key = text.trim().toLowerCase();
-  const current = () => key === "" || source.value.trim().toLowerCase() === key;
-  if (searchCache.has(key)) {
-    if (current()) showSuggestions(searchCache.get(key));
-    return;
-  }
-  if (Date.now() < searchPausedUntil) return;
-  searchController?.abort();
-  const requestController = new AbortController();
-  searchController = requestController;
-  try {
-    const results = await searchMarketplaces(text, { signal: requestController.signal });
-    searchCache.set(key, results);
-    if (searchController === requestController && current()) showSuggestions(results);
-  } catch (error) {
-    if (error.name === "AbortError") return;
-    searchPausedUntil = Date.now() + 60000;
-    byID("source-help").textContent = "Suggestions are paused briefly by GitHub's search limit. You can still type any repository.";
-  }
-}
-
-source.addEventListener("input", () => {
-  resetDiscovery();
-  debounce = setTimeout(discover, 600);
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => suggest(source.value), 400);
 });
 
-source.addEventListener("focus", () => suggest(""), { once: true });
-
-form.addEventListener("submit", (event) => {
-  event.preventDefault();
-  discover();
+marketplaceOptions.addEventListener("change", () => {
+  renderPlugins();
+  updateLinks();
 });
-
-options.addEventListener("change", updateLinks);
+pluginOptions.addEventListener("change", updateLinks);
 target.addEventListener("input", updateLinks);
-
-discover();
