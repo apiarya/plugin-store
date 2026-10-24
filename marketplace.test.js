@@ -186,14 +186,14 @@ test("double-encodes marketplace and plugin links according to the documented wr
   assert.equal(new URL(new URL(workiq.plugin).searchParams.get("open")).searchParams.get("source"), "workiq@work-iq");
 });
 
-test("session links open in the run-in-copilot repository with only documented parameters", () => {
+test("session links open in the plugin-store repository with only documented parameters", () => {
   const links = pluginLinks("anthropics/life-sciences", "life-sciences", "clinical-trial-protocol");
   const appLink = new URL(new URL(links.session).searchParams.get("open"));
   assert.equal(appLink.protocol, "ghapp:");
   assert.equal(appLink.hostname, "session");
   assert.equal(appLink.pathname, "/new");
   assert.deepEqual([...appLink.searchParams.keys()], ["repo", "mode", "prompt"]);
-  assert.equal(appLink.searchParams.get("repo"), "apiarya/run-in-copilot");
+  assert.equal(appLink.searchParams.get("repo"), "apiarya/plugin-store");
   assert.equal(appLink.searchParams.get("mode"), "interactive");
   assert.equal(appLink.searchParams.get("prompt"), "Use the clinical-trial-protocol@life-sciences plugin. What can you do?");
   assert.throws(() => pluginLinks("owner/repo", "invalid@marketplace", "plugin"));
@@ -230,6 +230,20 @@ test("page has accessible labels, initially disabled links, and safe rendering",
   const helper = await readFile(new URL("./launch.js", import.meta.url), "utf8");
   assert.match(helper, /open\.startsWith\("ghapp:\/\/"\)/);
   assert.ok(!helper.includes("innerHTML"));
+});
+
+test("branding and package metadata use Plugin Store", async () => {
+  const html = await readFile(new URL("./index.html", import.meta.url), "utf8");
+  const readme = await readFile(new URL("./README.md", import.meta.url), "utf8");
+  const packageJSON = JSON.parse(await readFile(new URL("./package.json", import.meta.url), "utf8"));
+  assert.match(html, /<title>Plugin Store — Discover what your agent can do<\/title>/);
+  assert.match(html, /aria-label="Plugin Store home"/);
+  assert.match(html, /class="brand-name">Plugin <span>Store<\/span>/);
+  assert.match(html, /class="tagline">Discover what your agent can do\.<\/p>/);
+  assert.equal(packageJSON.name, "plugin-store");
+  assert.match(readme, /^# Plugin Store\n/);
+  assert.match(readme, /https:\/\/apiarya\.github\.io\/plugin-store\//);
+  for (const content of [html, readme]) assert.doesNotMatch(content, /run-in-copilot|Run in Copilot/);
 });
 
 test("Pages deployment includes the launch handoff and its dependencies", async () => {

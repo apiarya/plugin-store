@@ -4,9 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#ffffff">
-    <meta name="description" content="Search GitHub marketplaces by repository, owner, or keyword. Discover their plugins and try them in the GitHub Copilot desktop app.">
+    <meta name="description" content="Discover plugins from public GitHub marketplaces and try them in the GitHub Copilot desktop app.">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://api.github.com https://raw.githubusercontent.com; script-src 'self'; style-src 'self'; img-src 'self' https://avatars.githubusercontent.com; base-uri 'none'; object-src 'none'; form-action 'none'">
-    <title>Run in Copilot — Discover your next plugin</title>
+    <title>Plugin Store — Discover what your agent can do</title>
     <link rel="icon" href="./icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="./styles.css">
     <script type="module" src="./app.js"></script>
@@ -14,13 +14,13 @@
   <body class="home">
     <main>
       <form id="search-form" role="search">
-        <a class="brand" href="./" aria-label="Run in Copilot home"><span class="brand-mark" aria-hidden="true">↗</span><span class="brand-name">Run in <span>Copilot</span></span></a>
+        <a class="brand" href="./" aria-label="Plugin Store home"><span class="brand-mark" aria-hidden="true">↗</span><span class="brand-name">Plugin <span>Store</span></span></a>
         <label class="visually-hidden" for="search-term">Search marketplaces by repository, owner, or keyword</label>
         <div class="search-box">
           <input id="search-term" type="search" name="q" autofocus placeholder="Search marketplaces by repository, owner, or keyword" required autocomplete="off" autocapitalize="none" spellcheck="false">
           <button id="search-button" type="submit">Search</button>
         </div>
-        <p class="tagline">Find a marketplace, browse its plugins, and try one in GitHub Copilot.</p>
+        <p class="tagline">Discover what your agent can do.</p>
       </form>
 
       <section id="results" aria-label="Search results" hidden>
