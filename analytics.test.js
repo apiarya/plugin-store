@@ -35,3 +35,19 @@ test("the content security policy allows only the Google Analytics origins it ne
   assert.match(policy, /connect-src [^;]*https:\/\/\*\.google-analytics\.com/);
   assert.doesNotMatch(policy, /'unsafe-inline'|'unsafe-eval'/);
 });
+
+test("the Pages workflow deploys every local module the pages import", async () => {
+  const { readdir } = await import("node:fs/promises");
+  const workflows = await readdir(new URL("./.github/workflows/", import.meta.url));
+  const workflow = (await Promise.all(workflows.map((name) => readFile(new URL(`./.github/workflows/${name}`, import.meta.url), "utf8")))).join("\n");
+  const deployed = new Set(workflow.match(/cp ([^\n]+) _site\//)[1].split(/\s+/));
+  const pending = ["index.html", "launch.html"];
+  for (const file of pending) {
+    assert.ok(deployed.has(file), `${file} is not deployed`);
+    const source = await readFile(new URL(`./${file}`, import.meta.url), "utf8");
+    for (const [, dependency] of source.matchAll(/(?:src|href|from)\s*=?\s*"\.\/([\w.-]+\.(?:js|css|svg))"/g)) {
+      assert.ok(deployed.has(dependency), `${dependency} (used by ${file}) is not deployed`);
+      if (dependency.endsWith(".js") && !pending.includes(dependency)) pending.push(dependency);
+    }
+  }
+});
