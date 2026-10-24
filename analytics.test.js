@@ -51,3 +51,14 @@ test("the Pages workflow deploys every local module the pages import", async () 
     }
   }
 });
+
+test("link previews use a deployed Open Graph image", async () => {
+  const html = await readFile(new URL("./index.html", import.meta.url), "utf8");
+  const image = html.match(/property="og:image" content="https:\/\/apiarya\.github\.io\/plugin-store\/([\w.-]+)"/)?.[1];
+  assert.equal(image, "og-image.png");
+  assert.match(html, /property="og:title"/);
+  assert.match(html, /name="twitter:card" content="summary_large_image"/);
+  const workflow = await readFile(new URL("./.github/workflows/pages.yml", import.meta.url), "utf8");
+  assert.match(workflow, new RegExp(`cp [^\\n]*\\b${image.replace(".", "\\.")}\\b[^\\n]*_site/`));
+  await readFile(new URL(`./${image}`, import.meta.url));
+});
