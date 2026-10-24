@@ -68,7 +68,9 @@ export function initializeStorefront(onSelect) {
   const sections = document.getElementById("marketplace-sections");
   const date = document.getElementById("catalog-date");
   date.dateTime = snapshotDate;
-  date.textContent = new Date(`${snapshotDate}T00:00:00Z`).toLocaleDateString("en-US", {
+  const today = new Date(Date.now()).toISOString().slice(0, 10);
+  date.textContent = snapshotDate === today ? "today" : formatRelativeTime(snapshotDate, Date.parse(today));
+  date.title = new Date(`${snapshotDate}T00:00:00Z`).toLocaleDateString("en-US", {
     month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
   });
 

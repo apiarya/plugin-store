@@ -16,9 +16,10 @@
       <div class="header-inner">
         <a id="home-link" class="brand" href="./" aria-label="Plugin Store home"><span class="brand-mark" aria-hidden="true">↗</span><span class="brand-name">Plugin <span>Store</span></span></a>
         <form id="search-form" role="search">
-          <label class="visually-hidden" for="search-term">Search plugin marketplaces by repository, owner, or keyword</label>
+          <label class="visually-hidden search-label" for="search-term">Find your next plugin</label>
           <div class="search-box">
-            <input id="search-term" type="search" name="q" autofocus placeholder="Search plugin marketplaces by repository, owner, or keyword" required autocomplete="off" autocapitalize="none" spellcheck="false">
+            <svg class="search-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 5 5"></path></svg>
+            <input id="search-term" type="search" name="q" autofocus placeholder="Repository, owner, or keyword" required autocomplete="off" autocapitalize="none" spellcheck="false">
             <button id="search-button" type="submit">Search</button>
           </div>
         </form>
@@ -28,7 +29,10 @@
     <main>
       <section id="storefront" class="discover" aria-labelledby="discover-title">
         <div class="section-heading">
-          <div><h1 id="discover-title">Discover plugins</h1><p>Popular marketplaces, grouped by what you want to do.</p></div>
+          <div>
+            <h1 id="discover-title">Discover plugins</h1>
+            <p class="catalog-note">Curated marketplaces &middot; Ranked by GitHub stars &middot; Snapshot: <time id="catalog-date"></time></p>
+          </div>
           <span id="pick-count" class="pick-count" role="status" aria-live="polite"></span>
         </div>
         <div class="categories" role="group" aria-label="Filter marketplace categories">
@@ -39,7 +43,6 @@
           <button type="button" data-category="security" aria-pressed="false">Security</button>
           <button type="button" data-category="research" aria-pressed="false">Research</button>
         </div>
-        <p class="catalog-note">Curated picks, ranked by GitHub repository stars. Snapshot: <time id="catalog-date"></time>.</p>
         <div id="marketplace-sections"></div>
       </section>
 

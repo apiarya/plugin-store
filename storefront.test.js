@@ -3,7 +3,33 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { parseRepository } from "./marketplace.js";
 import { categories, marketplaces, marketplaceURL, rankedMarketplaces, snapshotDate } from "./catalog.js";
-import { createMarketplaceCard } from "./storefront.js";
+import { createMarketplaceCard, initializeStorefront } from "./storefront.js";
+
+test("catalog snapshot uses relative days with its exact date available on hover", (t) => {
+  const originalDocument = globalThis.document;
+  const date = {};
+  const sections = { replaceChildren() {}, append() {} };
+  globalThis.document = {
+    getElementById: (id) => id === "catalog-date" ? date : id === "marketplace-sections" ? sections : {},
+    querySelectorAll: () => [],
+    createElement: () => ({
+      dataset: {}, append() {}, setAttribute() {}, addEventListener() {},
+    }),
+  };
+  t.after(() => {
+    if (originalDocument === undefined) delete globalThis.document;
+    else globalThis.document = originalDocument;
+  });
+  let now = Date.parse(snapshotDate);
+  t.mock.method(Date, "now", () => now);
+  for (const [days, expected] of [[0, "today"], [1, "1 day ago"], [5, "5 days ago"], [30, "1 month ago"]]) {
+    now = Date.parse(snapshotDate) + days * 86_400_000 + 12 * 3_600_000;
+    initializeStorefront(() => {});
+    assert.equal(date.textContent, expected);
+    assert.equal(date.dateTime, snapshotDate);
+    assert.equal(date.title, "Oct 24, 2026");
+  }
+});
 
 test("storefront has exactly five categories with three unique marketplaces each", () => {
   assert.equal(categories.length, 5);
