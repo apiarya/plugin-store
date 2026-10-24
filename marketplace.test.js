@@ -124,22 +124,21 @@ test("double-encodes marketplace and plugin links according to the documented wr
   const links = pluginLinks("anthropics/life-sciences", "life-sciences", "clinical-trial-protocol");
   assert.equal(links.marketplace, "https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fplugins%2Fmarketplace%2Fadd%3Fsource%3Danthropics%252Flife-sciences");
   assert.equal(links.plugin, "https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fplugins%2Finstall%3Fsource%3Dclinical-trial-protocol%2540life-sciences");
-  assert.equal(links.session, null);
+  assert.ok(links.session);
   const workiq = pluginLinks("microsoft/work-iq", "work-iq", "workiq");
   assert.equal(new URL(new URL(workiq.plugin).searchParams.get("open")).searchParams.get("source"), "workiq@work-iq");
 });
 
-test("session links require a separate target and contain only documented parameters", () => {
-  const links = pluginLinks("anthropics/life-sciences", "life-sciences", "clinical-trial-protocol", "apiarya/my-project");
+test("session links open in the run-in-copilot repository with only documented parameters", () => {
+  const links = pluginLinks("anthropics/life-sciences", "life-sciences", "clinical-trial-protocol");
   const appLink = new URL(new URL(links.session).searchParams.get("open"));
   assert.equal(appLink.protocol, "ghapp:");
   assert.equal(appLink.hostname, "session");
   assert.equal(appLink.pathname, "/new");
   assert.deepEqual([...appLink.searchParams.keys()], ["repo", "mode", "prompt"]);
-  assert.equal(appLink.searchParams.get("repo"), "apiarya/my-project");
+  assert.equal(appLink.searchParams.get("repo"), "apiarya/run-in-copilot");
   assert.equal(appLink.searchParams.get("mode"), "interactive");
   assert.equal(appLink.searchParams.get("prompt"), "Use the clinical-trial-protocol@life-sciences plugin. What can you do?");
-  assert.throws(() => pluginLinks("owner/repo", "valid", "plugin", "bad"));
   assert.throws(() => pluginLinks("owner/repo", "invalid@marketplace", "plugin"));
 });
 
@@ -150,17 +149,16 @@ test("query values round-trip special characters without adding parameters", () 
   assert.deepEqual([...link.searchParams.keys()], ["repo", "prompt"]);
 });
 
-test("page has accessible labels, initially disabled links, no prefilled target, and safe rendering", async () => {
+test("page has accessible labels, initially disabled links, and safe rendering", async () => {
   const html = await readFile(new URL("./index.html", import.meta.url), "utf8");
   const script = await readFile(new URL("./app.js", import.meta.url), "utf8");
-  for (const id of ["search-term", "target-repo"]) {
+  for (const id of ["search-term"]) {
     assert.ok(html.includes(`for="${id}"`));
     assert.ok(html.includes(`id="${id}"`));
   }
   assert.match(html, /<div id="result-options" class="result-list" role="radiogroup"/);
   assert.match(html, /role="status" aria-live="polite"/);
-  const targetInput = html.match(/<input id="target-repo"[^>]*>/)[0];
-  assert.ok(!targetInput.includes("value="));
+  assert.ok(!html.includes("target-repo"));
   assert.equal((html.match(/aria-disabled="true" tabindex="-1"/g) ?? []).length, 3);
   assert.ok(!script.includes("innerHTML"));
   assert.ok(!script.includes("eval("));

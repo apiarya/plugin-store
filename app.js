@@ -1,7 +1,6 @@
-import { findMarketplaces, matchesTerm, parseRepository, pluginLinks } from "./marketplace.js";
+import { findMarketplaces, matchesTerm, pluginLinks } from "./marketplace.js";
 
 const PAGE_SIZE = 20;
-const TARGET_KEY = "run-in-copilot:target-repo";
 const byID = (id) => document.getElementById(id);
 const form = byID("search-form");
 const term = byID("search-term");
@@ -11,8 +10,6 @@ const status = byID("search-status");
 const options = byID("result-options");
 const more = byID("more-results");
 const actions = byID("actions");
-const target = byID("target-repo");
-const targetError = byID("target-error");
 let results = [];
 let shown = 0;
 let controller = null;
@@ -42,12 +39,6 @@ function returned() {
 }
 window.addEventListener("focus", returned);
 document.addEventListener("visibilitychange", returned);
-
-try {
-  target.value = localStorage.getItem(TARGET_KEY) ?? "";
-} catch {
-  // Storage can be unavailable in private browsing; the field still works.
-}
 
 function setLink(id, href) {
   const link = byID(id);
@@ -124,24 +115,11 @@ function option(value, repository, title, stars, description) {
   return wrapper;
 }
 
-function targetRepository() {
-  targetError.textContent = "";
-  target.removeAttribute("aria-invalid");
-  if (!target.value.trim()) return "";
-  try {
-    return parseRepository(target.value);
-  } catch (error) {
-    targetError.textContent = error.message;
-    target.setAttribute("aria-invalid", "true");
-    return "";
-  }
-}
-
 const selected = () => results[Number(options.querySelector("input:checked")?.value)];
 
 function updateLinks() {
   const result = selected();
-  const links = result ? pluginLinks(result.marketplace.repository, result.marketplace.name, result.plugin.name, targetRepository()) : null;
+  const links = result ? pluginLinks(result.marketplace.repository, result.marketplace.name, result.plugin.name) : null;
   setLink("marketplace-launch", links?.marketplace);
   setLink("plugin-launch", links?.plugin);
   setLink("session-launch", links?.session);
@@ -220,11 +198,3 @@ options.addEventListener("change", (event) => {
   updateLinks();
 });
 more.addEventListener("click", showMore);
-target.addEventListener("input", () => {
-  try {
-    localStorage.setItem(TARGET_KEY, target.value.trim());
-  } catch {
-    // Ignore storage failures.
-  }
-  updateLinks();
-});

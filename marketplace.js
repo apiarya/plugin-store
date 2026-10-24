@@ -109,7 +109,9 @@ export function launchLink(path, values) {
   return `https://github.com/copilot/app/launch?open=${encodeURIComponent(`ghapp://${path}?${query}`)}`;
 }
 
-export function pluginLinks(repository, marketplace, plugin, targetRepository = "") {
+export const SESSION_REPOSITORY = "apiarya/run-in-copilot";
+
+export function pluginLinks(repository, marketplace, plugin) {
   const source = parseRepository(repository);
   if (!NAME_PATTERN.test(marketplace) || !NAME_PATTERN.test(plugin)) throw new Error("Select a valid marketplace plugin.");
   const pluginID = `${plugin}@${marketplace}`;
@@ -117,9 +119,7 @@ export function pluginLinks(repository, marketplace, plugin, targetRepository = 
   return {
     marketplace: launchLink("plugins/marketplace/add", { source }),
     plugin: launchLink("plugins/install", { source: pluginID }),
-    session: targetRepository ? launchLink("session/new", {
-      repo: parseRepository(targetRepository), mode: "interactive", prompt,
-    }) : null,
+    session: launchLink("session/new", { repo: SESSION_REPOSITORY, mode: "interactive", prompt }),
     prompt,
   };
 }
