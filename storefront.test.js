@@ -195,6 +195,9 @@ test("selected marketplace has an accessible product view with the shared plugin
   assert.match(html, /id="product-avatar"/);
   assert.match(html, /id="back-to-results"/);
   assert.doesNotMatch(html, /id="product-browse-all"/);
+  const script = await readFile(new URL("./app.js", import.meta.url), "utf8");
+  assert.match(script, /back\.textContent = directSelection \? "← Back to search" : "← Search results"/);
+  assert.match(script, /if \(directSelection\) \{\s*showStorefront\(\);/);
   for (const id of ["search-form", "actions", "marketplace-browser", "marketplace-launch", "plugin-launch", "session-launch"]) {
     assert.equal(html.split(`id="${id}"`).length - 1, 1, `Expected one shared ${id}`);
   }

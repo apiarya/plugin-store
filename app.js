@@ -191,8 +191,10 @@ function showProduct(marketplace) {
   product.hidden = false;
   product.append(actions);
   actions.hidden = false;
-  byID("back-to-results").hidden = directSelection;
-  byID("back-to-results").parentElement.hidden = directSelection;
+  const back = byID("back-to-results");
+  back.hidden = false;
+  back.parentElement.hidden = false;
+  back.textContent = directSelection ? "← Back to search" : "← Search results";
   byID("product-title").textContent = marketplace.name;
   const repository = byID("product-repository");
   repository.textContent = marketplace.repository;
@@ -499,6 +501,10 @@ function showStorefront() {
 
 byID("browse-all").addEventListener("click", showStorefront);
 byID("back-to-results").addEventListener("click", () => {
+  if (directSelection) {
+    showStorefront();
+    return;
+  }
   if (window.history.state?.returnSearch) {
     window.history.back();
     return;
