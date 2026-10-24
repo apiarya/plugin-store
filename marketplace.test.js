@@ -157,8 +157,7 @@ test("page has accessible labels, initially disabled links, no prefilled target,
     assert.ok(html.includes(`for="${id}"`));
     assert.ok(html.includes(`id="${id}"`));
   }
-  assert.match(html, /<div id="marketplace-options" class="option-list" role="radiogroup"/);
-  assert.match(html, /<div id="plugin-options" class="option-list" role="radiogroup"/);
+  assert.match(html, /<div id="result-options" class="result-list" role="radiogroup"/);
   assert.match(html, /role="status" aria-live="polite"/);
   const targetInput = html.match(/<input id="target-repo"[^>]*>/)[0];
   assert.ok(!targetInput.includes("value="));

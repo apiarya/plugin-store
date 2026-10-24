@@ -1,21 +1,27 @@
-import { findMarketplaces, marketplaceMatchesTerm, matchesTerm, parseRepository, pluginLinks } from "./marketplace.js";
+import { findMarketplaces, matchesTerm, parseRepository, pluginLinks } from "./marketplace.js";
 
+const PAGE_SIZE = 20;
+const TARGET_KEY = "run-in-copilot:target-repo";
 const byID = (id) => document.getElementById(id);
 const form = byID("search-form");
 const term = byID("search-term");
 const button = byID("search-button");
+const resultsSection = byID("results");
 const status = byID("search-status");
-const marketplaceFields = byID("marketplace-fields");
-const marketplaceOptions = byID("marketplace-options");
-const pluginFields = byID("plugin-fields");
-const pluginOptions = byID("plugin-options");
+const options = byID("result-options");
+const more = byID("more-results");
+const actions = byID("actions");
 const target = byID("target-repo");
 const targetError = byID("target-error");
 let results = [];
-let searchedTerm = "";
+let shown = 0;
 let controller = null;
 
-const checked = (group) => group.querySelector("input:checked")?.value;
+try {
+  target.value = localStorage.getItem(TARGET_KEY) ?? "";
+} catch {
+  // Storage can be unavailable in private browsing; the field still works.
+}
 
 function setLink(id, href) {
   const link = byID(id);
@@ -30,35 +36,25 @@ function setLink(id, href) {
   }
 }
 
-function setStep(id, enabled) {
-  if (enabled) byID(id).removeAttribute("aria-disabled");
-  else byID(id).setAttribute("aria-disabled", "true");
-}
-
 function setStatus(message, kind = "") {
-  status.hidden = !message;
-  status.className = `notice ${kind}`.trim();
+  status.className = `status ${kind}`.trim();
   status.textContent = message;
 }
 
-function option(group, value, title, meta, description, isChecked) {
+function option(value, title, meta, description) {
   const label = document.createElement("label");
   label.className = "option";
   const radio = document.createElement("input");
   radio.type = "radio";
-  radio.name = group;
+  radio.name = "result";
   radio.value = value;
-  radio.checked = isChecked;
   const heading = document.createElement("span");
   heading.className = "option-heading";
   const name = document.createElement("strong");
   name.textContent = title;
-  heading.append(name);
-  if (meta) {
-    const extra = document.createElement("small");
-    extra.textContent = meta;
-    heading.append(extra);
-  }
+  const extra = document.createElement("small");
+  extra.textContent = meta;
+  heading.append(name, extra);
   const body = document.createElement("span");
   body.className = "option-body";
   body.append(heading);
@@ -68,7 +64,10 @@ function option(group, value, title, meta, description, isChecked) {
     body.append(text);
   }
   label.append(radio, body);
-  return label;
+  const wrapper = document.createElement("div");
+  wrapper.className = "result";
+  wrapper.append(label);
+  return wrapper;
 }
 
 function targetRepository() {
@@ -84,43 +83,35 @@ function targetRepository() {
   }
 }
 
-const selectedMarketplace = () => results.find((item) => item.repository === checked(marketplaceOptions));
-
-function renderPlugins() {
-  const marketplace = selectedMarketplace();
-  pluginOptions.replaceChildren();
-  pluginFields.hidden = !marketplace;
-  if (!marketplace) return;
-  byID("manifest-link").href = marketplace.manifestURL;
-  const plugins = [...marketplace.plugins].sort((a, b) => matchesTerm(b, searchedTerm) - matchesTerm(a, searchedTerm));
-  plugins.forEach((plugin, index) => {
-    pluginOptions.append(option("plugin", plugin.name, plugin.name, matchesTerm(plugin, searchedTerm) ? "Matches your search" : "", plugin.description, index === 0));
-  });
-}
+const selected = () => results[Number(options.querySelector("input:checked")?.value)];
 
 function updateLinks() {
-  const marketplace = selectedMarketplace();
-  const plugin = marketplace?.plugins.find((item) => item.name === checked(pluginOptions));
-  const links = plugin ? pluginLinks(marketplace.repository, marketplace.name, plugin.name, targetRepository()) : null;
+  const result = selected();
+  const links = result ? pluginLinks(result.marketplace.repository, result.marketplace.name, result.plugin.name, targetRepository()) : null;
   setLink("marketplace-launch", links?.marketplace);
   setLink("plugin-launch", links?.plugin);
   setLink("session-launch", links?.session);
-  setStep("step-plugin", Boolean(marketplace));
-  setStep("step-session", Boolean(plugin));
-  byID("prompt-details").hidden = !links;
-  byID("prompt-preview").textContent = links?.prompt ?? "";
+  if (result) byID("manifest-link").href = result.marketplace.manifestURL;
 }
 
-function renderMarketplaces() {
-  marketplaceOptions.replaceChildren();
-  marketplaceFields.hidden = results.length === 0;
-  results.forEach((marketplace, index) => {
-    const count = `${marketplace.plugins.length} ${marketplace.plugins.length === 1 ? "plugin" : "plugins"}`;
-    const matched = marketplaceMatchesTerm(marketplace, searchedTerm) ? "Matches your search" : "";
-    const meta = [marketplace.repository, marketplace.stars ? `★ ${marketplace.stars.toLocaleString()}` : "", count, matched].filter(Boolean).join(" · ");
-    marketplaceOptions.append(option("marketplace", marketplace.repository, marketplace.name, meta, marketplace.description, index === 0));
+function showMore() {
+  results.slice(shown, shown + PAGE_SIZE).forEach(({ marketplace, plugin }, offset) => {
+    const stars = marketplace.stars ? `★ ${marketplace.stars.toLocaleString()}` : "";
+    const meta = [`${marketplace.name} marketplace`, marketplace.repository, stars].filter(Boolean).join(" · ");
+    options.append(option(String(shown + offset), plugin.name, meta, plugin.description || marketplace.description));
   });
-  renderPlugins();
+  shown = Math.min(results.length, shown + PAGE_SIZE);
+  more.hidden = shown >= results.length;
+}
+
+function render(marketplaces, searched) {
+  const pairs = marketplaces.flatMap((marketplace) => marketplace.plugins.map((plugin) => ({ marketplace, plugin, match: matchesTerm(plugin, searched) })));
+  results = [...pairs.filter((pair) => pair.match), ...pairs.filter((pair) => !pair.match)];
+  shown = 0;
+  actions.hidden = true;
+  document.body.append(actions);
+  options.replaceChildren();
+  showMore();
   updateLinks();
 }
 
@@ -134,23 +125,22 @@ form.addEventListener("submit", async (event) => {
     timedOut = true;
     requestController.abort();
   }, 20000);
-  results = [];
-  searchedTerm = term.value.trim();
-  renderMarketplaces();
+  const searched = term.value.trim();
+  document.body.classList.replace("home", "searched");
+  resultsSection.hidden = false;
+  render([], searched);
   button.disabled = true;
-  button.textContent = "Searching…";
   form.setAttribute("aria-busy", "true");
-  setStatus("Searching GitHub and checking marketplace manifests…");
+  setStatus("Searching GitHub for plugin marketplaces…");
   try {
-    const found = await findMarketplaces(searchedTerm, { signal: requestController.signal });
+    const found = await findMarketplaces(searched, { signal: requestController.signal });
     if (controller !== requestController) return;
-    results = found.filter((marketplace) => marketplace.plugins.length > 0);
-    if (results.length === 0) {
-      setStatus(found.length ? "That marketplace has no plugins listed in its manifest." : `No marketplaces found for “${searchedTerm}”. Try a broader word.`);
-    } else {
-      setStatus(`${results.length} ${results.length === 1 ? "marketplace" : "marketplaces"} found. Pick one, then add it to Copilot.`, "success");
-    }
-    renderMarketplaces();
+    render(found, searched);
+    const count = results.length;
+    const marketplaceCount = found.filter((marketplace) => marketplace.plugins.length > 0).length;
+    setStatus(count
+      ? `${count} ${count === 1 ? "plugin" : "plugins"} from ${marketplaceCount} ${marketplaceCount === 1 ? "marketplace" : "marketplaces"}. Select one to install it.`
+      : `No plugins found for “${searched}”. Try another word or a GitHub owner name.`);
   } catch (error) {
     if (controller !== requestController) return;
     if (timedOut) setStatus("GitHub took too long to respond. Check your connection and try again.", "error");
@@ -162,14 +152,22 @@ form.addEventListener("submit", async (event) => {
       controller = null;
       form.removeAttribute("aria-busy");
       button.disabled = false;
-      button.textContent = "Search";
     }
   }
 });
 
-marketplaceOptions.addEventListener("change", () => {
-  renderPlugins();
+options.addEventListener("change", (event) => {
+  if (event.target.name !== "result") return;
+  event.target.closest(".result").append(actions);
+  actions.hidden = false;
   updateLinks();
 });
-pluginOptions.addEventListener("change", updateLinks);
-target.addEventListener("input", updateLinks);
+more.addEventListener("click", showMore);
+target.addEventListener("input", () => {
+  try {
+    localStorage.setItem(TARGET_KEY, target.value.trim());
+  } catch {
+    // Ignore storage failures.
+  }
+  updateLinks();
+});

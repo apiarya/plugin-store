@@ -6,13 +6,13 @@ A single-page, browser-only launcher for public GitHub marketplace plugins in th
 
 ## Use it
 
-1. Search for any word (for example `security` or `postgres`), or enter a repository as `owner/repository`. The page runs public GitHub repository searches for `<term>`, `<term> plugin`, and, when the term could be an owner name, `user:<term>`, keeps only repositories that contain a marketplace manifest, and lists them in GitHub's best-match order. Pick one and select **Add marketplace to GitHub Copilot**.
-2. Pick a plugin (plugins matching your search are listed first) and select **Install plugin in GitHub Copilot**. Each button opens Copilot's confirmation form; confirm the action in the app.
-3. Enter your own target repository, then select **Ask “What can you do?”** to open an interactive session requesting the selected plugin.
+1. Search for any word (for example `security`, `work-iq`, or an owner such as `forcedotcom`), or enter a repository as `owner/repository`. The page runs public GitHub repository searches for `<term>`, `<term> plugin`, and, when the term could be an owner name, `user:<term>`, and keeps only repositories that contain a marketplace manifest.
+2. Each result is one plugin from one marketplace. Plugins matching your search come first; the rest follow in GitHub's best-match order.
+3. Select a result to show three buttons: **Add marketplace**, **Install plugin**, and **Ask “What can you do?”**. Each opens a confirmation in the Copilot app. The chat button needs a repository to work in; the page remembers it in your browser.
 
 Marketplace and plugin identifiers come from manifest contents, not repository names. The site checks `.claude-plugin/marketplace.json`, then `.github/plugin/marketplace.json`, on each repository's default branch. Unauthenticated GitHub search allows about 10 API searches per minute, and each page search uses up to three (manifest checks don't count toward it), and loading, empty manifests, and errors are shown on the page.
 
-The page cannot detect installation success or force plugin activation. The documented session endpoint requires a target repository and has no plugin-binding parameter; the opening prompt requests the plugin by its `plugin@marketplace` identifier. The target is never prefilled with the marketplace repository.
+The page cannot detect installation success or force plugin activation. The documented session endpoint requires a target repository and has no plugin-binding parameter; the opening prompt requests the plugin by its `plugin@marketplace` identifier. The target is never prefilled with the marketplace repository; only a value you entered earlier is restored from local storage.
 
 ## Local development
 
