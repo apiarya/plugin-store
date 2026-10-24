@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { discoverMarketplace, findMarketplaces, launchLink, marketplaceMatchesTerm, matchesTerm, parseManifest, parseRepository, pluginLinks, searchQueries } from "./marketplace.js";
+import { discoverMarketplace, findMarketplaces, formatRelativeTime, launchLink, marketplaceMatchesTerm, marketplaceResults, matchesTerm, parseManifest, parseRepository, pluginLinks, searchQueries } from "./marketplace.js";
 
 const example = {
   name: "life-sciences",
@@ -55,14 +55,58 @@ test("keeps untrusted descriptions as text and bounds their length", () => {
 });
 
 test("discovers a manifest on the actual default branch", async () => {
-  const mock = mockGitHub([jsonResponse({ default_branch: "release/v2" }), jsonResponse(example)]);
+  const mock = mockGitHub([jsonResponse({
+    default_branch: "release/v2",
+    pushed_at: "2026-10-20T12:30:00Z",
+    topics: ["science", "research", "skills", "extra"],
+    owner: { avatar_url: "https://avatars.githubusercontent.com/u/123?v=4" },
+  }), jsonResponse(example)]);
   const controller = new AbortController();
   const result = await discoverMarketplace("anthropics/life-sciences", { fetchImpl: mock.fetchImpl, signal: controller.signal });
   assert.equal(result.name, "life-sciences");
   assert.equal(result.repository, "anthropics/life-sciences");
   assert.equal(result.manifestURL, "https://raw.githubusercontent.com/anthropics/life-sciences/release%2Fv2/.claude-plugin/marketplace.json");
+  assert.equal(result.pushedAt, "2026-10-20T12:30:00Z");
+  assert.deepEqual(result.topics, ["science", "research", "skills"]);
+  assert.equal(result.avatarURL, "https://avatars.githubusercontent.com/u/123?v=4");
   assert.equal(mock.requests[0].url, "https://api.github.com/repos/anthropics/life-sciences");
   assert.ok(mock.requests.every(({ options }) => options.signal === controller.signal));
+});
+
+test("last-push timestamps use relative time with exact unit boundaries", () => {
+  const now = Date.parse("2026-10-24T12:00:00Z");
+  for (const [elapsed, expected] of [
+    [0, "just now"],
+    [59_999, "just now"],
+    [60_000, "1 minute ago"],
+    [3_599_999, "59 minutes ago"],
+    [3_600_000, "1 hour ago"],
+    [86_399_999, "23 hours ago"],
+    [86_400_000, "1 day ago"],
+    [2 * 86_400_000, "2 days ago"],
+    [29 * 86_400_000, "29 days ago"],
+    [30 * 86_400_000, "1 month ago"],
+    [365 * 86_400_000, "1 year ago"],
+    [2 * 365 * 86_400_000, "2 years ago"],
+    [-2 * 86_400_000, "in 2 days"],
+  ]) {
+    assert.equal(formatRelativeTime(new Date(now - elapsed).toISOString(), now), expected);
+  }
+  assert.throws(() => formatRelativeTime("not-a-date", now), RangeError);
+});
+
+test("optional repository metadata is omitted when absent or invalid", async () => {
+  for (const metadata of [
+    {},
+    { pushed_at: "not-a-date", topics: "not-an-array", owner: { avatar_url: "https://avatars.githubusercontent.com.example.org/avatar" } },
+    { pushed_at: null, topics: [null, "", " ", 12], owner: { avatar_url: "javascript:alert(1)" } },
+  ]) {
+    const mock = mockGitHub([jsonResponse({ default_branch: "main", ...metadata }), jsonResponse(example)]);
+    const result = await discoverMarketplace("anthropics/life-sciences", { fetchImpl: mock.fetchImpl });
+    assert.equal(result.pushedAt, "");
+    assert.deepEqual(result.topics, []);
+    assert.equal(result.avatarURL, "");
+  }
 });
 
 test("falls back to the GitHub plugin manifest path only when the first path is absent", async () => {
@@ -157,9 +201,13 @@ test("page has accessible labels, initially disabled links, and safe rendering",
     assert.ok(html.includes(`id="${id}"`));
   }
   assert.match(html, /<div id="result-options" class="result-list" role="radiogroup"/);
+  assert.match(html, /role="radiogroup" aria-label="Marketplaces"/);
   assert.match(html, /role="status" aria-live="polite"/);
   assert.match(html, /for="search-term">Search marketplaces by repository, owner, or keyword<\/label>/);
   assert.match(html, /placeholder="Search marketplaces by repository, owner, or keyword"/);
+  assert.match(html, /<h3 id="marketplace-summary">Choose a plugin<\/h3>/);
+  assert.ok(!html.includes('id="selected-plugin"'));
+  assert.ok(!html.includes('id="selected-plugin-description"'));
   assert.ok(!html.includes("target-repo"));
   assert.equal((html.match(/aria-disabled="true" tabindex="-1"/g) ?? []).length, 3);
   assert.ok(!script.includes("innerHTML"));
@@ -193,6 +241,47 @@ test("search queries and plugin matching", () => {
   assert.ok(!marketplaceMatchesTerm({ name: "tools", repository: "acme/kit" }, "postgres"));
 });
 
+test("marketplace results group plugins by source and prioritize matching groups", () => {
+  const first = { name: "shared", repository: "a/tools", plugins: [{ name: "lint", description: "" }] };
+  const matching = { name: "shared", repository: "b/tools", plugins: [
+    { name: "other", description: "" },
+    { name: "pg", description: "Postgres helpers" },
+    { name: "postgres-test", description: "" },
+  ] };
+  const last = { name: "last", repository: "c/tools", plugins: [{ name: "format", description: "" }] };
+  const empty = { name: "empty", repository: "d/tools", plugins: [] };
+  const results = marketplaceResults([first, matching, last, empty], "postgres");
+  assert.equal(results.length, 3);
+  assert.deepEqual(results.map(({ marketplace }) => marketplace.repository), ["b/tools", "a/tools", "c/tools"]);
+  assert.equal(results[0].plugin.name, "pg");
+  assert.equal(results[0].marketplace.plugins.length, 3);
+  assert.equal(results[1].plugin.name, "lint");
+  assert.equal(matching.plugins[0].name, "other");
+  assert.deepEqual(marketplaceResults([], "postgres"), []);
+  assert.deepEqual(marketplaceResults([empty], "postgres"), []);
+  assert.deepEqual(marketplaceResults([first, matching], "").map(({ marketplace }) => marketplace.repository), ["a/tools", "b/tools"]);
+});
+
+test("most-stars sorting orders all groups by stars, retaining relevance for ties", () => {
+  const create = (repository, stars, name = "other") => ({
+    repository, name: repository, stars, plugins: [{ name, description: "" }],
+  });
+  const marketplaces = [
+    create("a/match", 186, "spec-driven-workflow"),
+    create("b/popular", 4303),
+    create("c/tie", 186),
+    create("d/unknown"),
+    create("e/zero", 0),
+  ];
+  const stars = marketplaceResults(marketplaces, "spec-driven-workflow", "stars");
+  assert.deepEqual(stars.map(({ marketplace }) => marketplace.repository), ["b/popular", "a/match", "c/tie", "d/unknown", "e/zero"]);
+  assert.equal(stars[1].plugin.name, "spec-driven-workflow");
+  assert.equal(marketplaceResults(marketplaces, "spec-driven-workflow")[0].marketplace.repository, "a/match");
+  assert.equal(marketplaces[0].repository, "a/match");
+  const many = Array.from({ length: 25 }, (_, index) => create(`owner/repo-${index}`, index));
+  assert.equal(marketplaceResults(many, "", "stars")[0].marketplace.stars, 24);
+});
+
 test("findMarketplaces keeps only repositories with valid manifests in GitHub order", async () => {
   const requests = [];
   const manifests = {
@@ -217,7 +306,7 @@ test("findMarketplaces keeps only repositories with valid manifests in GitHub or
         assert.equal(query, "postgres");
         assert.equal(new URL(url).searchParams.get("sort"), null);
         return jsonResponse({ items: [
-          { full_name: "a/one", default_branch: "main", stargazers_count: 9, description: "First" },
+          { full_name: "a/one", default_branch: "main", stargazers_count: 9, description: "First", pushed_at: "2026-10-21T00:00:00Z", topics: ["postgres", "tools"], owner: { avatar_url: "https://avatars.githubusercontent.com/u/456" } },
           { full_name: "b/two", default_branch: "trunk", stargazers_count: 3 },
           { full_name: "c/bad", default_branch: "main" },
           { full_name: "d/none", default_branch: "main" },
@@ -231,6 +320,9 @@ test("findMarketplaces keeps only repositories with valid manifests in GitHub or
   });
   assert.deepEqual(results.map((item) => [item.repository, item.name, item.stars]), [["a/one", "one", 9], ["b/two", "two", 3], ["f/postgres-hub", "hub", 1], ["g/tagged", "tagged", 50]]);
   assert.equal(results[0].description, "First");
+  assert.equal(results[0].pushedAt, "2026-10-21T00:00:00Z");
+  assert.deepEqual(results[0].topics, ["postgres", "tools"]);
+  assert.equal(results[0].avatarURL, "https://avatars.githubusercontent.com/u/456");
   assert.equal(requests.filter((url) => url.includes("raw.githubusercontent.com/B/Two")).length, 0);
   assert.ok(!requests.some((url) => url.includes("e/private")));
   await assert.rejects(findMarketplaces("x", { fetchImpl: async () => jsonResponse({}, 403, { "x-ratelimit-remaining": "0", "x-ratelimit-reset": "2000000000" }) }), (error) => /rate limit/.test(error.message) && error.retryAt === 2000000000000);

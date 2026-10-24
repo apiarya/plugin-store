@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#ffffff">
     <meta name="description" content="Search GitHub marketplaces by repository, owner, or keyword. Discover their plugins and try them in the GitHub Copilot desktop app.">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://api.github.com https://raw.githubusercontent.com; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://api.github.com https://raw.githubusercontent.com; script-src 'self'; style-src 'self'; img-src 'self' https://avatars.githubusercontent.com; base-uri 'none'; object-src 'none'; form-action 'none'">
     <title>Run in Copilot — Discover your next plugin</title>
     <link rel="icon" href="./icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="./styles.css">
@@ -24,26 +24,39 @@
       </form>
 
       <section id="results" aria-label="Search results" hidden>
-        <p id="search-status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
-        <div id="result-options" class="result-list" role="radiogroup" aria-label="Plugins"></div>
+        <div class="results-toolbar">
+          <p id="search-status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
+          <div class="sort-control">
+            <label for="result-sort">Sort by</label>
+            <select id="result-sort">
+              <option value="best-match">Best match</option>
+              <option value="stars">Most stars</option>
+            </select>
+          </div>
+        </div>
+        <div id="result-options" class="result-list" role="radiogroup" aria-label="Marketplaces"></div>
         <button id="more-results" class="more" type="button" hidden>More results</button>
       </section>
 
       <div id="actions" class="actions" hidden>
         <section id="marketplace-browser" class="marketplace-browser" aria-labelledby="marketplace-summary">
-          <h3 id="marketplace-summary">Browse marketplace</h3>
+          <h3 id="marketplace-summary">Choose a plugin</h3>
           <label class="visually-hidden" for="marketplace-filter">Filter marketplace plugins</label>
           <input id="marketplace-filter" type="search" placeholder="Filter plugins in this marketplace" autocomplete="off">
           <div id="marketplace-plugins" class="marketplace-plugins" role="group" aria-label="Marketplace plugins"></div>
           <p id="marketplace-count" class="marketplace-count" role="status" aria-live="polite"></p>
+          <nav id="plugin-pagination" class="plugin-pagination" aria-label="Plugin pages" hidden>
+            <button id="plugin-previous" type="button" aria-controls="marketplace-plugins">Previous</button>
+            <span id="plugin-page-status" role="status" aria-live="polite"></span>
+            <button id="plugin-next" type="button" aria-controls="marketplace-plugins">Next</button>
+          </nav>
         </section>
-        <p id="selected-plugin" class="selected-plugin" aria-live="polite"></p>
         <div class="action-row">
-          <a id="marketplace-launch" class="launch-button" aria-disabled="true" tabindex="-1"><span class="step-number" aria-hidden="true">1</span>Add marketplace</a>
-          <a id="plugin-launch" class="launch-button" aria-disabled="true" tabindex="-1"><span class="step-number" aria-hidden="true">2</span>Install plugin</a>
-          <a id="session-launch" class="launch-button primary" aria-disabled="true" tabindex="-1"><span class="step-number" aria-hidden="true">3</span>Ask “What can you do?”</a>
+          <a id="marketplace-launch" class="launch-button" aria-disabled="true" tabindex="-1"><span class="step-number" aria-hidden="true">1</span><span class="launch-label"><span>Add marketplace</span><span id="marketplace-launch-name" class="launch-name"></span></span></a>
+          <a id="plugin-launch" class="launch-button" aria-disabled="true" tabindex="-1"><span class="step-number" aria-hidden="true">2</span><span class="launch-label"><span>Install plugin</span><span id="plugin-launch-name" class="launch-name"></span></span></a>
+          <a id="session-launch" class="launch-button" aria-disabled="true" tabindex="-1"><span class="step-number" aria-hidden="true">3</span><span class="launch-label"><span>Ask “What can you do?”</span><span id="session-launch-name" class="launch-name"></span></span></a>
         </div>
-        <p class="actions-note">Each button opens the Copilot app in a new tab; confirm there and come back. The tab closes itself. <a id="manifest-link" target="_blank" rel="noopener noreferrer">View manifest ↗</a></p>
+        <p class="actions-note">Each button opens the Copilot app in a new tab; confirm there and come back. The tab closes itself. <a id="manifest-link" target="_blank" rel="noopener noreferrer">View manifest ↗</a> · <a id="repository-link" target="_blank" rel="noopener noreferrer">Open repo ↗</a></p>
       </div>
 
       <noscript><p class="status error">JavaScript is required to search GitHub and create the Copilot launch links.</p></noscript>

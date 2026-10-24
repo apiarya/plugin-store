@@ -80,6 +80,35 @@ function responseError(response, context) {
   return new Error(`${context} (HTTP ${response.status}). Please try again later.`);
 }
 
+function repositoryMetadata(metadata) {
+  return {
+    description: typeof metadata.description === "string" ? metadata.description.slice(0, 300) : "",
+    stars: Number(metadata.stargazers_count) || 0,
+    pushedAt: typeof metadata.pushed_at === "string" && Number.isFinite(Date.parse(metadata.pushed_at)) ? metadata.pushed_at : "",
+    topics: Array.isArray(metadata.topics) ? metadata.topics.filter((topic) => typeof topic === "string" && topic.trim()).slice(0, 3) : [],
+    avatarURL: typeof metadata.owner?.avatar_url === "string" && metadata.owner.avatar_url.startsWith("https://avatars.githubusercontent.com/") ? metadata.owner.avatar_url : "",
+  };
+}
+
+export function formatRelativeTime(timestamp, now = Date.now()) {
+  const difference = Date.parse(timestamp) - now;
+  if (!Number.isFinite(difference)) throw new RangeError("Invalid last-push timestamp.");
+  const elapsed = Math.abs(difference);
+  if (elapsed < 60_000) return "just now";
+  for (const [duration, unit] of [
+    [365 * 86_400_000, "year"],
+    [30 * 86_400_000, "month"],
+    [86_400_000, "day"],
+    [3_600_000, "hour"],
+    [60_000, "minute"],
+  ]) {
+    if (elapsed >= duration) {
+      const value = Math.floor(elapsed / duration) * Math.sign(difference);
+      return new Intl.RelativeTimeFormat("en", { numeric: "always" }).format(value, unit);
+    }
+  }
+}
+
 export async function discoverMarketplace(value, { fetchImpl = fetch, signal } = {}) {
   const repository = parseRepository(value);
   const metadataResponse = await fetchImpl(`https://api.github.com/repos/${repository}`, {
@@ -97,8 +126,7 @@ export async function discoverMarketplace(value, { fetchImpl = fetch, signal } =
     if (!response.ok) throw responseError(response, "Could not load the marketplace manifest");
     return {
       ...parseManifest(await readJSON(response)), repository, manifestURL: url,
-      description: typeof metadata.description === "string" ? metadata.description.slice(0, 300) : "",
-      stars: Number(metadata.stargazers_count) || 0,
+      ...repositoryMetadata(metadata),
     };
   }
   throw new Error(`No marketplace manifest found on the default branch. Expected ${MANIFEST_PATHS.join(" or ")}.`);
@@ -152,6 +180,21 @@ export function matchesTerm(plugin, term) {
   return matchesText(`${plugin.name} ${plugin.description}`, term);
 }
 
+export function marketplaceResults(marketplaces, term, sort = "best-match") {
+  const groups = marketplaces.filter((marketplace) => marketplace.plugins.length > 0).map((marketplace) => ({
+    marketplace,
+    plugin: marketplace.plugins.find((plugin) => matchesTerm(plugin, term)) ?? marketplace.plugins[0],
+  }));
+  const results = [
+    ...groups.filter(({ plugin }) => matchesTerm(plugin, term)),
+    ...groups.filter(({ plugin }) => !matchesTerm(plugin, term)),
+  ];
+  if (sort === "stars") {
+    results.sort((a, b) => (b.marketplace.stars ?? 0) - (a.marketplace.stars ?? 0));
+  }
+  return results;
+}
+
 export function marketplaceMatchesTerm(marketplace, term) {
   return matchesText(`${marketplace.name} ${marketplace.repository}`, term);
 }
@@ -166,8 +209,7 @@ async function readManifest(item, fetchImpl, signal) {
     try {
       return {
         ...parseManifest(await readJSON(response)), repository, manifestURL: url,
-        description: typeof item.description === "string" ? item.description.slice(0, 300) : "",
-        stars: Number(item.stargazers_count) || 0,
+        ...repositoryMetadata(item),
       };
     } catch {
       return null;

@@ -1,6 +1,7 @@
-import { findMarketplaces, matchesTerm, pluginLinks } from "./marketplace.js";
+import { findMarketplaces, formatRelativeTime, marketplaceResults, pluginLinks } from "./marketplace.js";
 
 const PAGE_SIZE = 20;
+const PLUGIN_PAGE_SIZE = 6;
 const byID = (id) => document.getElementById(id);
 const form = byID("search-form");
 const term = byID("search-term");
@@ -12,8 +13,13 @@ const more = byID("more-results");
 const actions = byID("actions");
 const marketplaceFilter = byID("marketplace-filter");
 const marketplacePlugins = byID("marketplace-plugins");
+const resultSort = byID("result-sort");
+let foundMarketplaces = [];
+let searchedTerm = "";
 let results = [];
 let activePlugin = null;
+let filteredPlugins = [];
+let pluginPage = 0;
 let shown = 0;
 let controller = null;
 let retryTimer = null;
@@ -21,7 +27,16 @@ let launched = null;
 const launchButtons = ["marketplace-launch", "plugin-launch", "session-launch"].map(byID);
 
 function clearDone() {
-  launchButtons.forEach((link) => link.classList.remove("done"));
+  launchButtons.forEach((link) => {
+    link.classList.remove("done", "next-step");
+    link.removeAttribute("aria-current");
+  });
+}
+
+function highlightMarketplaceStep() {
+  const link = byID("marketplace-launch");
+  link.classList.add("next-step");
+  link.setAttribute("aria-current", "step");
 }
 
 launchButtons.forEach((link) => link.addEventListener("click", (event) => {
@@ -37,6 +52,8 @@ function returned() {
   const { link, tab } = launched;
   launched = null;
   tab?.close();
+  link.classList.remove("next-step");
+  link.removeAttribute("aria-current");
   link.classList.add("done");
   launchButtons.slice(launchButtons.indexOf(link) + 1).find((next) => next.href)?.focus();
 }
@@ -83,7 +100,10 @@ function setStatus(message, kind = "") {
   status.textContent = message;
 }
 
-function option(value, repository, title, stars, description) {
+function option(value, marketplace) {
+  const { repository, name: title, description, pushedAt, topics, avatarURL } = marketplace;
+  const stars = marketplace.stars ? `★ ${marketplace.stars.toLocaleString()}` : "";
+  const pluginCount = marketplace.plugins.length;
   const label = document.createElement("label");
   label.className = "option";
   const radio = document.createElement("input");
@@ -92,6 +112,18 @@ function option(value, repository, title, stars, description) {
   radio.value = value;
   const heading = document.createElement("span");
   heading.className = "option-heading";
+  if (avatarURL) {
+    const avatar = document.createElement("img");
+    avatar.className = "owner-avatar";
+    avatar.src = avatarURL;
+    avatar.alt = "";
+    avatar.width = 24;
+    avatar.height = 24;
+    avatar.loading = "lazy";
+    avatar.decoding = "async";
+    avatar.referrerPolicy = "no-referrer";
+    heading.append(avatar);
+  }
   const name = document.createElement("strong");
   name.textContent = title;
   name.title = title;
@@ -100,6 +132,10 @@ function option(value, repository, title, stars, description) {
   source.textContent = `· ${repository}`;
   source.title = repository;
   heading.append(name, source);
+  const count = document.createElement("small");
+  count.className = "plugin-count";
+  count.textContent = `${pluginCount} ${pluginCount === 1 ? "plugin" : "plugins"}`;
+  heading.append(count);
   if (stars) {
     const reputation = document.createElement("small");
     reputation.className = "stars";
@@ -111,8 +147,28 @@ function option(value, repository, title, stars, description) {
   body.append(heading);
   if (description) {
     const text = document.createElement("span");
+    text.className = "option-description";
     text.textContent = description;
     body.append(text);
+  }
+  if (topics.length) {
+    const tags = document.createElement("span");
+    tags.className = "result-topics";
+    for (const topic of topics) {
+      const tag = document.createElement("span");
+      tag.className = "topic-tag";
+      tag.textContent = topic;
+      tags.append(tag);
+    }
+    body.append(tags);
+  }
+  if (pushedAt) {
+    const lastPush = document.createElement("time");
+    lastPush.className = "last-push";
+    lastPush.dateTime = pushedAt;
+    lastPush.title = new Date(pushedAt).toLocaleString();
+    lastPush.textContent = `Last push ${formatRelativeTime(pushedAt)}`;
+    body.append(lastPush);
   }
   label.append(radio, body);
   const wrapper = document.createElement("div");
@@ -130,51 +186,75 @@ function updateLinks() {
   setLink("marketplace-launch", links?.marketplace);
   setLink("plugin-launch", links?.plugin);
   setLink("session-launch", links?.session);
-  if (result) byID("manifest-link").href = result.marketplace.manifestURL;
-  byID("selected-plugin").textContent = result ? `Selected: ${plugin.name}@${result.marketplace.name}` : "";
+  byID("marketplace-launch-name").textContent = result?.marketplace.name ?? "";
+  byID("plugin-launch-name").textContent = plugin?.name ?? "";
+  byID("session-launch-name").textContent = plugin?.name ?? "";
+  if (result) {
+    byID("manifest-link").href = result.marketplace.manifestURL;
+    byID("repository-link").href = `https://github.com/${result.marketplace.repository}`;
+  }
 }
 
 function filterMarketplace() {
   const marketplace = selected()?.marketplace;
   if (!marketplace) return;
   const query = marketplaceFilter.value.trim().toLowerCase();
-  let visible = 0;
-  [...marketplacePlugins.children].forEach((button, index) => {
-    const plugin = marketplace.plugins[index];
-    button.hidden = !`${plugin.name} ${plugin.description}`.toLowerCase().includes(query);
-    if (!button.hidden) visible++;
-  });
-  byID("marketplace-count").textContent = `${visible} of ${marketplace.plugins.length} plugins · ${marketplace.repository}`;
+  filteredPlugins = marketplace.plugins.filter((plugin) => `${plugin.name} ${plugin.description}`.toLowerCase().includes(query));
+  pluginPage = 0;
+  renderPluginPage();
 }
 
 function renderMarketplace() {
   const result = selected();
   marketplaceFilter.value = "";
+  filteredPlugins = result?.marketplace.plugins ?? [];
+  const plugin = activePlugin ?? result?.plugin;
+  pluginPage = Math.max(0, Math.floor(filteredPlugins.indexOf(plugin) / PLUGIN_PAGE_SIZE));
+  renderPluginPage();
+}
+
+function renderPluginPage() {
   marketplacePlugins.replaceChildren();
-  if (!result) return;
-  const { marketplace } = result;
-  byID("marketplace-summary").textContent = `Browse marketplace · ${marketplace.plugins.length} ${marketplace.plugins.length === 1 ? "plugin" : "plugins"}`;
-  for (const plugin of marketplace.plugins) {
+  const start = pluginPage * PLUGIN_PAGE_SIZE;
+  const end = Math.min(start + PLUGIN_PAGE_SIZE, filteredPlugins.length);
+  byID("plugin-pagination").hidden = filteredPlugins.length <= PLUGIN_PAGE_SIZE;
+  byID("plugin-previous").disabled = pluginPage === 0;
+  byID("plugin-next").disabled = end >= filteredPlugins.length;
+  byID("plugin-page-status").textContent = filteredPlugins.length ? `${start + 1}-${end} of ${filteredPlugins.length}` : "";
+  const marketplace = selected()?.marketplace;
+  const query = marketplaceFilter.value.trim();
+  byID("marketplace-count").textContent = !query || !marketplace ? "" : filteredPlugins.length
+    ? `${filteredPlugins.length} of ${marketplace.plugins.length} ${marketplace.plugins.length === 1 ? "plugin" : "plugins"}`
+    : "No matching plugins";
+  for (const plugin of filteredPlugins.slice(start, end)) {
     const choice = document.createElement("button");
     choice.type = "button";
     choice.className = "marketplace-choice";
     choice.dataset.plugin = plugin.name;
     choice.title = plugin.description;
-    const name = document.createElement("span");
+    const content = document.createElement("span");
+    content.className = "choice-content";
+    const name = document.createElement("strong");
+    name.className = "choice-title";
     name.textContent = plugin.name;
+    const description = document.createElement("span");
+    description.className = "choice-description";
+    description.textContent = plugin.description || "No description provided by this marketplace.";
+    content.append(name, description);
     const marker = document.createElement("span");
     marker.className = "choice-marker";
-    choice.append(name, marker);
+    choice.append(content, marker);
     choice.addEventListener("click", () => {
       activePlugin = plugin;
       clearDone();
       updateLinks();
       updateMarketplaceSelection();
+      highlightMarketplaceStep();
+      byID("marketplace-launch").focus();
     });
     marketplacePlugins.append(choice);
   }
   updateMarketplaceSelection();
-  filterMarketplace();
 }
 
 function updateMarketplaceSelection() {
@@ -187,17 +267,17 @@ function updateMarketplaceSelection() {
 }
 
 function showMore() {
-  results.slice(shown, shown + PAGE_SIZE).forEach(({ marketplace, plugin }, offset) => {
-    const stars = marketplace.stars ? `★ ${marketplace.stars.toLocaleString()}` : "";
-    options.append(option(String(shown + offset), marketplace.repository, plugin.name, stars, plugin.description || marketplace.description));
+  results.slice(shown, shown + PAGE_SIZE).forEach(({ marketplace }, offset) => {
+    options.append(option(String(shown + offset), marketplace));
   });
   shown = Math.min(results.length, shown + PAGE_SIZE);
   more.hidden = shown >= results.length;
 }
 
 function render(marketplaces, searched) {
-  const pairs = marketplaces.flatMap((marketplace) => marketplace.plugins.map((plugin) => ({ marketplace, plugin, match: matchesTerm(plugin, searched) })));
-  results = [...pairs.filter((pair) => pair.match), ...pairs.filter((pair) => !pair.match)];
+  foundMarketplaces = marketplaces;
+  searchedTerm = searched;
+  results = marketplaceResults(marketplaces, searched, resultSort.value);
   shown = 0;
   activePlugin = null;
   actions.hidden = true;
@@ -234,11 +314,11 @@ form.addEventListener("submit", async (event) => {
     const found = await findMarketplaces(searched, { signal: requestController.signal });
     if (controller !== requestController) return;
     render(found, searched);
-    const count = results.length;
-    const marketplaceCount = found.filter((marketplace) => marketplace.plugins.length > 0).length;
-    setStatus(count
-      ? `${count} ${count === 1 ? "plugin" : "plugins"} from ${marketplaceCount} ${marketplaceCount === 1 ? "marketplace" : "marketplaces"}. Select one to install it.`
-      : `No plugins found for “${searched}”. Try another word or a GitHub owner name.`);
+    const count = results.reduce((total, { marketplace }) => total + marketplace.plugins.length, 0);
+    const marketplaceCount = results.length;
+    setStatus(marketplaceCount
+      ? `${marketplaceCount} ${marketplaceCount === 1 ? "marketplace" : "marketplaces"} with ${count} ${count === 1 ? "plugin" : "plugins"}. Select a marketplace to browse its plugins.`
+      : `No marketplaces found for “${searched}”. Try another word or a GitHub owner name.`);
   } catch (error) {
     if (controller !== requestController) return;
     if (timedOut) setStatus("GitHub took too long to respond. Check your connection and try again.", "error");
@@ -263,9 +343,34 @@ options.addEventListener("change", (event) => {
   actions.hidden = false;
   updateLinks();
   renderMarketplace();
+  highlightMarketplaceStep();
+  marketplaceFilter.focus();
 });
 more.addEventListener("click", showMore);
 marketplaceFilter.addEventListener("input", filterMarketplace);
+byID("plugin-previous").addEventListener("click", () => {
+  pluginPage--;
+  renderPluginPage();
+});
+byID("plugin-next").addEventListener("click", () => {
+  pluginPage++;
+  renderPluginPage();
+});
+resultSort.addEventListener("change", () => {
+  const current = selected();
+  results = marketplaceResults(foundMarketplaces, searchedTerm, resultSort.value);
+  shown = 0;
+  document.body.append(actions);
+  options.replaceChildren();
+  showMore();
+  if (current) {
+    const index = results.findIndex(({ marketplace }) => marketplace === current.marketplace);
+    while (shown <= index) showMore();
+    const radio = options.querySelector(`input[value="${index}"]`);
+    radio.checked = true;
+    radio.closest(".result").append(actions);
+  }
+});
 
 const initialSearch = new URLSearchParams(window.location.search).get("q")?.trim();
 if (initialSearch) {
