@@ -1,6 +1,7 @@
 import { findMarketplaces, formatRelativeTime, marketplaceResults, pluginLinks } from "./marketplace.js";
 import { createMarketplaceCard, initializeStorefront, topicTags } from "./storefront.js";
 import { catalogRepositories } from "./catalog.js";
+import { analytics } from "./analytics.js";
 
 const PAGE_SIZE = 20;
 const PLUGIN_PAGE_SIZE = 5;
@@ -33,6 +34,7 @@ let launched = null;
 let directSelection = false;
 let restoringHistory = false;
 const searchCache = new Map();
+const LAUNCH_EVENTS = { "marketplace-launch": "add_marketplace", "plugin-launch": "install_plugin", "session-launch": "ask_plugin" };
 const launchButtons = ["marketplace-launch", "plugin-launch", "session-launch"].map(byID);
 
 function navigateURL(url, { replace = false, state = null } = {}) {
@@ -61,6 +63,11 @@ launchButtons.forEach((link) => {
   link.addEventListener("click", (event) => {
     if (!link.href) return;
     highlightStep(link);
+    const result = selected();
+    analytics.track(LAUNCH_EVENTS[link.id], {
+      marketplace_repository: result?.marketplace.repository ?? "",
+      plugin_name: (activePlugin ?? result?.plugin)?.name ?? "",
+    });
     const tab = window.open(link.href, "_blank");
     if (!tab) return;
     event.preventDefault();
@@ -409,6 +416,7 @@ form.addEventListener("submit", async (event) => {
     while (shown < restoredShown) showMore();
     const count = results.reduce((total, { marketplace }) => total + marketplace.plugins.length, 0);
     const marketplaceCount = results.length;
+    if (!restore) analytics.track("search", { search_term: searched, results_count: marketplaceCount });
     setStatus(marketplaceCount
       ? `${marketplaceCount} ${marketplaceCount === 1 ? "marketplace" : "marketplaces"} · ${count} ${count === 1 ? "plugin" : "plugins"}`
       : "No marketplaces found.");

@@ -72,3 +72,7 @@ Repository and manifest requests go directly from your browser to `api.github.co
 App links follow the [official Copilot deep-link documentation](https://docs.github.com/en/copilot/how-tos/github-copilot-app/open-with-deep-links): query values are encoded first, then the entire `ghapp://` link is encoded inside `https://github.com/copilot/app/launch?open=…`.
 
 This is an independent project, not affiliated with GitHub.
+
+## Analytics
+
+The published site (`apiarya.github.io`) uses Google Analytics 4 (`G-B8TTJGCDXK`) to count page views, searches (`search` with the search term and result count), and launch clicks (`add_marketplace`, `install_plugin`, `ask_plugin` with the marketplace repository and plugin name). `analytics.js` loads the Google tag only on that host, so local previews are not tracked. The Content-Security-Policy allows scripts from `www.googletagmanager.com` and connections to Google Analytics; inline scripts remain blocked.
