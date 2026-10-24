@@ -65,8 +65,11 @@ async function readJSON(response) {
 function responseError(response, context) {
   if (response.status === 429 || (response.status === 403 && response.headers.get("x-ratelimit-remaining") === "0")) {
     const reset = Number(response.headers.get("x-ratelimit-reset"));
-    const retry = reset > 0 ? ` Try again after ${new Date(reset * 1000).toLocaleTimeString()}.` : " Please wait a few minutes and try again.";
-    return new Error(`GitHub's public request rate limit was reached.${retry}`);
+    const retryAfter = Number(response.headers.get("retry-after"));
+    const retryAt = reset > 0 ? reset * 1000 : retryAfter > 0 ? Date.now() + retryAfter * 1000 : Date.now() + 60000;
+    const error = new Error(`GitHub's public request rate limit was reached. Try again after ${new Date(retryAt).toLocaleTimeString()}.`);
+    error.retryAt = retryAt;
+    return error;
   }
   if (response.status === 403) {
     return new Error("GitHub denied access to this repository. It must be public and available without signing in.");
@@ -92,7 +95,11 @@ export async function discoverMarketplace(value, { fetchImpl = fetch, signal } =
     const response = await fetchImpl(url, { signal });
     if (response.status === 404) continue;
     if (!response.ok) throw responseError(response, "Could not load the marketplace manifest");
-    return { ...parseManifest(await readJSON(response)), repository, manifestURL: url };
+    return {
+      ...parseManifest(await readJSON(response)), repository, manifestURL: url,
+      description: typeof metadata.description === "string" ? metadata.description.slice(0, 300) : "",
+      stars: Number(metadata.stargazers_count) || 0,
+    };
   }
   throw new Error(`No marketplace manifest found on the default branch. Expected ${MANIFEST_PATHS.join(" or ")}.`);
 }
@@ -102,7 +109,9 @@ export function launchLink(path, values) {
   return `https://github.com/copilot/app/launch?open=${encodeURIComponent(`ghapp://${path}?${query}`)}`;
 }
 
-export function pluginLinks(repository, marketplace, plugin, targetRepository = "") {
+export const SESSION_REPOSITORY = "apiarya/run-in-copilot";
+
+export function pluginLinks(repository, marketplace, plugin) {
   const source = parseRepository(repository);
   if (!NAME_PATTERN.test(marketplace) || !NAME_PATTERN.test(plugin)) throw new Error("Select a valid marketplace plugin.");
   const pluginID = `${plugin}@${marketplace}`;
@@ -110,9 +119,81 @@ export function pluginLinks(repository, marketplace, plugin, targetRepository = 
   return {
     marketplace: launchLink("plugins/marketplace/add", { source }),
     plugin: launchLink("plugins/install", { source: pluginID }),
-    session: targetRepository ? launchLink("session/new", {
-      repo: parseRepository(targetRepository), mode: "interactive", prompt,
-    }) : null,
+    session: launchLink("session/new", { repo: SESSION_REPOSITORY, mode: "interactive", prompt }),
     prompt,
   };
+}
+
+
+export function searchQueries(term) {
+  const words = term.replace(/[^\w.\s-]+/g, " ").replace(/\s+/g, " ").trim();
+  const queries = [words, `${words} plugin`];
+  if (/^[a-z\d](?:[a-z\d-]{0,38})$/i.test(words)) queries.splice(1, 0, `user:${words}`);
+  return queries;
+}
+
+async function searchRepositories(query, fetchImpl, signal, limit) {
+  const url = new URL("https://api.github.com/search/repositories");
+  url.searchParams.set("q", query);
+  url.searchParams.set("per_page", String(limit));
+  const response = await fetchImpl(url.href, { signal, headers: { Accept: "application/vnd.github+json" } });
+  if (!response.ok) throw responseError(response, "Could not search GitHub");
+  const result = await readJSON(response);
+  return Array.isArray(result.items) ? result.items : [];
+}
+
+function matchesText(text, term) {
+  const words = term.toLowerCase().split(/[^\w]+/).filter(Boolean);
+  const haystack = text.toLowerCase();
+  return words.length > 0 && words.every((word) => haystack.includes(word));
+}
+
+export function matchesTerm(plugin, term) {
+  return matchesText(`${plugin.name} ${plugin.description}`, term);
+}
+
+export function marketplaceMatchesTerm(marketplace, term) {
+  return matchesText(`${marketplace.name} ${marketplace.repository}`, term);
+}
+
+async function readManifest(item, fetchImpl, signal) {
+  const repository = item.full_name;
+  for (const path of MANIFEST_PATHS) {
+    const url = `https://raw.githubusercontent.com/${repository}/${encodeURIComponent(item.default_branch)}/${path}`;
+    const response = await fetchImpl(url, { signal });
+    if (response.status === 404) continue;
+    if (!response.ok) return null;
+    try {
+      return {
+        ...parseManifest(await readJSON(response)), repository, manifestURL: url,
+        description: typeof item.description === "string" ? item.description.slice(0, 300) : "",
+        stars: Number(item.stargazers_count) || 0,
+      };
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+export async function findMarketplaces(term, { fetchImpl = fetch, signal, limit = 50 } = {}) {
+  if (term.includes("/")) {
+    return [await discoverMarketplace(term, { fetchImpl, signal })];
+  }
+  if (!term.trim()) throw new Error("Type a word to search for, such as security or postgres.");
+  const searches = await Promise.allSettled(searchQueries(term).map((query) => searchRepositories(query, fetchImpl, signal, limit)));
+  if (searches.every((search) => search.status === "rejected")) throw searches.find((search) => search.reason?.retryAt)?.reason ?? searches[0].reason;
+  const seen = new Set();
+  const items = searches.flatMap((search) => search.status === "fulfilled" ? search.value : []).filter((item) => {
+    if (typeof item?.full_name !== "string" || item.private || typeof item.default_branch !== "string" || !item.default_branch) return false;
+    const key = item.full_name.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const found = await Promise.all(items.map((item) => readManifest(item, fetchImpl, signal).catch((error) => {
+    if (error.name === "AbortError") throw error;
+    return null;
+  })));
+  return found.filter((marketplace) => marketplace && marketplace.plugins.length > 0);
 }

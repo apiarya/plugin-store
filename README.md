@@ -6,13 +6,13 @@ A single-page, browser-only launcher for public GitHub marketplace plugins in th
 
 ## Use it
 
-1. Choose Life Sciences or Work IQ, or enter a public GitHub repository as `owner/repository` or a repository URL. Select **Find plugins**.
-2. Pick an actual plugin from the marketplace manifest. **Add marketplace** and **Install plugin** open Copilot's confirmation forms; confirm each action in the app.
-3. Enter your own target repository, then select **Ask “What can you do?”** to open an interactive session requesting the selected plugin.
+1. Search for any word (for example `security`, `work-iq`, or an owner such as `forcedotcom`), or enter a repository as `owner/repository`. The page runs public GitHub repository searches for `<term>`, `<term> plugin`, and, when the term could be an owner name, `user:<term>`, and keeps only repositories that contain a marketplace manifest.
+2. Each result is one plugin from one marketplace. Plugins matching your search come first; the rest follow in GitHub's best-match order.
+3. Select a result to show three buttons: **Add marketplace**, **Install plugin**, and **Ask “What can you do?”**. Each opens a small tab (`launch.html`) that hands the link to the Copilot app and closes itself when you return to the browser; the step is then marked ✓ and the next button is focused. If the app doesn't open, the tab offers GitHub's hosted launcher instead. The chat button starts a session in the `apiarya/run-in-copilot` repository, which must be available in your Copilot app.
 
-Marketplace and plugin identifiers come from manifest contents, not repository names. The site resolves the repository's default branch and checks `.claude-plugin/marketplace.json`, then `.github/plugin/marketplace.json` if the first path is absent. Public GitHub API rate limits apply, and loading, empty manifests, and errors are shown on the page.
+Marketplace and plugin identifiers come from manifest contents, not repository names. The site checks `.claude-plugin/marketplace.json`, then `.github/plugin/marketplace.json`, on each repository's default branch. Unauthenticated GitHub search allows about 10 API searches per minute, and each page search uses up to three (manifest checks don't count toward it). If the limit is reached, the page counts down and retries automatically. Loading, loading, empty manifests, and errors are shown on the page.
 
-The page cannot detect installation success or force plugin activation. The documented session endpoint requires a target repository and has no plugin-binding parameter; the opening prompt requests the plugin by its `plugin@marketplace` identifier. The target is never prefilled with the marketplace repository.
+The page cannot detect installation success or force plugin activation. The documented session endpoint requires a repository and has no plugin-binding parameter, so sessions always open in `apiarya/run-in-copilot` and the opening prompt requests the plugin by its `plugin@marketplace` identifier.
 
 ## Local development
 

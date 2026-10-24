@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { discoverMarketplace, launchLink, parseManifest, parseRepository, pluginLinks } from "./marketplace.js";
+import { discoverMarketplace, findMarketplaces, launchLink, marketplaceMatchesTerm, matchesTerm, parseManifest, parseRepository, pluginLinks, searchQueries } from "./marketplace.js";
 
 const example = {
   name: "life-sciences",
@@ -124,22 +124,21 @@ test("double-encodes marketplace and plugin links according to the documented wr
   const links = pluginLinks("anthropics/life-sciences", "life-sciences", "clinical-trial-protocol");
   assert.equal(links.marketplace, "https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fplugins%2Fmarketplace%2Fadd%3Fsource%3Danthropics%252Flife-sciences");
   assert.equal(links.plugin, "https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fplugins%2Finstall%3Fsource%3Dclinical-trial-protocol%2540life-sciences");
-  assert.equal(links.session, null);
+  assert.ok(links.session);
   const workiq = pluginLinks("microsoft/work-iq", "work-iq", "workiq");
   assert.equal(new URL(new URL(workiq.plugin).searchParams.get("open")).searchParams.get("source"), "workiq@work-iq");
 });
 
-test("session links require a separate target and contain only documented parameters", () => {
-  const links = pluginLinks("anthropics/life-sciences", "life-sciences", "clinical-trial-protocol", "apiarya/my-project");
+test("session links open in the run-in-copilot repository with only documented parameters", () => {
+  const links = pluginLinks("anthropics/life-sciences", "life-sciences", "clinical-trial-protocol");
   const appLink = new URL(new URL(links.session).searchParams.get("open"));
   assert.equal(appLink.protocol, "ghapp:");
   assert.equal(appLink.hostname, "session");
   assert.equal(appLink.pathname, "/new");
   assert.deepEqual([...appLink.searchParams.keys()], ["repo", "mode", "prompt"]);
-  assert.equal(appLink.searchParams.get("repo"), "apiarya/my-project");
+  assert.equal(appLink.searchParams.get("repo"), "apiarya/run-in-copilot");
   assert.equal(appLink.searchParams.get("mode"), "interactive");
   assert.equal(appLink.searchParams.get("prompt"), "Use the clinical-trial-protocol@life-sciences plugin. What can you do?");
-  assert.throws(() => pluginLinks("owner/repo", "valid", "plugin", "bad"));
   assert.throws(() => pluginLinks("owner/repo", "invalid@marketplace", "plugin"));
 });
 
@@ -150,19 +149,86 @@ test("query values round-trip special characters without adding parameters", () 
   assert.deepEqual([...link.searchParams.keys()], ["repo", "prompt"]);
 });
 
-test("page has accessible labels, initially disabled links, no prefilled target, and safe rendering", async () => {
+test("page has accessible labels, initially disabled links, and safe rendering", async () => {
   const html = await readFile(new URL("./index.html", import.meta.url), "utf8");
   const script = await readFile(new URL("./app.js", import.meta.url), "utf8");
-  for (const id of ["marketplace-preset", "marketplace-source", "plugin-select", "target-repo"]) {
+  for (const id of ["search-term"]) {
     assert.ok(html.includes(`for="${id}"`));
     assert.ok(html.includes(`id="${id}"`));
   }
+  assert.match(html, /<div id="result-options" class="result-list" role="radiogroup"/);
   assert.match(html, /role="status" aria-live="polite"/);
-  const targetInput = html.match(/<input id="target-repo"[^>]*>/)[0];
-  assert.ok(!targetInput.includes("value="));
+  assert.ok(!html.includes("target-repo"));
   assert.equal((html.match(/aria-disabled="true" tabindex="-1"/g) ?? []).length, 3);
   assert.ok(!script.includes("innerHTML"));
   assert.ok(!script.includes("eval("));
-  assert.match(script, /byID\("plugin-description"\)\.textContent = plugin\.description/);
+  assert.match(script, /text\.textContent = description/);
   assert.match(html, /<noscript>/);
+  const helper = await readFile(new URL("./launch.js", import.meta.url), "utf8");
+  assert.match(helper, /open\.startsWith\("ghapp:\/\/"\)/);
+  assert.ok(!helper.includes("innerHTML"));
+});
+
+test("search queries and plugin matching", () => {
+  assert.deepEqual(searchQueries("postgres"), ["postgres", "user:postgres", "postgres plugin"]);
+  assert.deepEqual(searchQueries('a:b "c"'), ["a b c", "a b c plugin"]);
+  assert.ok(matchesTerm({ name: "pg-tools", description: "Postgres helpers" }, "postgres"));
+  assert.ok(!matchesTerm({ name: "pg-tools", description: "Postgres helpers" }, "mysql"));
+  assert.ok(!matchesTerm({ name: "x", description: "y" }, ""));
+  assert.ok(marketplaceMatchesTerm({ name: "tools", repository: "acme/postgres-kit" }, "postgres"));
+  assert.ok(marketplaceMatchesTerm({ name: "postgres-hub", repository: "acme/kit" }, "Postgres"));
+  assert.ok(!marketplaceMatchesTerm({ name: "tools", repository: "acme/kit" }, "postgres"));
+});
+
+test("findMarketplaces keeps only repositories with valid manifests in GitHub order", async () => {
+  const requests = [];
+  const manifests = {
+    "a/one/main/.claude-plugin/marketplace.json": { name: "one", plugins: [{ name: "lint" }] },
+    "b/two/trunk/.github/plugin/marketplace.json": { name: "two", plugins: [{ name: "pg", description: "Postgres tools" }] },
+    "c/bad/main/.claude-plugin/marketplace.json": { nope: true },
+    "f/postgres-hub/main/.claude-plugin/marketplace.json": { name: "hub", plugins: [{ name: "misc" }] },
+    "g/tagged/main/.claude-plugin/marketplace.json": { name: "tagged", plugins: [{ name: "other" }] },
+  };
+  const results = await findMarketplaces("postgres", {
+    fetchImpl: async (url) => {
+      requests.push(url);
+      if (url.startsWith("https://api.github.com/search/repositories")) {
+        const query = new URL(url).searchParams.get("q");
+        if (query === "user:postgres") return jsonResponse({ message: "Validation Failed" }, 422);
+        if (query === "postgres plugin") {
+          return jsonResponse({ items: [
+            { full_name: "B/Two", default_branch: "trunk", stargazers_count: 3 },
+            { full_name: "g/tagged", default_branch: "main", stargazers_count: 50 },
+          ] });
+        }
+        assert.equal(query, "postgres");
+        assert.equal(new URL(url).searchParams.get("sort"), null);
+        return jsonResponse({ items: [
+          { full_name: "a/one", default_branch: "main", stargazers_count: 9, description: "First" },
+          { full_name: "b/two", default_branch: "trunk", stargazers_count: 3 },
+          { full_name: "c/bad", default_branch: "main" },
+          { full_name: "d/none", default_branch: "main" },
+          { full_name: "e/private", default_branch: "main", private: true },
+          { full_name: "f/postgres-hub", default_branch: "main", stargazers_count: 1 },
+        ] });
+      }
+      const key = url.replace("https://raw.githubusercontent.com/", "");
+      return key in manifests ? jsonResponse(manifests[key]) : jsonResponse({}, 404);
+    },
+  });
+  assert.deepEqual(results.map((item) => [item.repository, item.name, item.stars]), [["a/one", "one", 9], ["b/two", "two", 3], ["f/postgres-hub", "hub", 1], ["g/tagged", "tagged", 50]]);
+  assert.equal(results[0].description, "First");
+  assert.equal(requests.filter((url) => url.includes("raw.githubusercontent.com/B/Two")).length, 0);
+  assert.ok(!requests.some((url) => url.includes("e/private")));
+  await assert.rejects(findMarketplaces("x", { fetchImpl: async () => jsonResponse({}, 403, { "x-ratelimit-remaining": "0", "x-ratelimit-reset": "2000000000" }) }), (error) => /rate limit/.test(error.message) && error.retryAt === 2000000000000);
+  await assert.rejects(findMarketplaces("x", { fetchImpl: async () => jsonResponse({}, 429, { "retry-after": "30" }) }), (error) => error.retryAt > Date.now() + 25000);
+  const partial = await findMarketplaces("x", {
+    fetchImpl: async (url) => {
+      if (url.includes("q=x+plugin")) return jsonResponse({}, 403, { "x-ratelimit-remaining": "0" });
+      if (url.startsWith("https://api.github.com/")) return jsonResponse({ items: [{ full_name: "a/one", default_branch: "main" }] });
+      return jsonResponse({ name: "one", plugins: [{ name: "p" }] });
+    },
+  });
+  assert.deepEqual(partial.map((item) => item.repository), ["a/one"]);
+  await assert.rejects(findMarketplaces("   "), /Type a word/);
 });
