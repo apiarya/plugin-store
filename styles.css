@@ -60,6 +60,17 @@ body.searched .search-box { max-width: none; }
 
 /* Actions for the selected result */
 .actions { padding: 0 16px 16px; }
+.marketplace-browser { margin-bottom: 14px; padding: 12px; border: 1px solid #d9cdf3; border-radius: 10px; background: #fff; }
+.marketplace-browser summary { color: var(--purple); font-size: 13px; font-weight: 650; cursor: pointer; }
+.marketplace-browser input { width: 100%; margin: 12px 0 8px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; }
+.marketplace-plugins { display: grid; gap: 3px; max-height: 210px; overflow-y: auto; }
+.marketplace-choice { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; width: 100%; padding: 9px; border: 0; border-radius: 6px; background: #fff; color: #34313b; font-size: 13px; text-align: left; cursor: pointer; }
+.marketplace-choice > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.choice-marker { flex: none; }
+.marketplace-choice:hover { background: #f8f6fd; }
+.marketplace-choice[aria-pressed="true"] { background: #efe8fb; color: var(--purple); font-weight: 650; }
+.marketplace-count { margin: 8px 0 0; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.selected-plugin { margin: 0 0 10px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .action-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .launch-button { display: flex; align-items: center; gap: 8px; min-height: 42px; padding: 8px 12px; border: 1px solid #d3c6ef; border-radius: 10px; background: #fff; color: #4c3b67; font-size: 13px; font-weight: 600; text-decoration: none; }
 .launch-button:not([aria-disabled="true"]):hover { background: #f1ebfd; border-color: #af95df; }

@@ -10,7 +10,11 @@ const status = byID("search-status");
 const options = byID("result-options");
 const more = byID("more-results");
 const actions = byID("actions");
+const marketplaceBrowser = byID("marketplace-browser");
+const marketplaceFilter = byID("marketplace-filter");
+const marketplacePlugins = byID("marketplace-plugins");
 let results = [];
+let activePlugin = null;
 let shown = 0;
 let controller = null;
 let retryTimer = null;
@@ -122,11 +126,66 @@ const selected = () => results[Number(options.querySelector("input:checked")?.va
 
 function updateLinks() {
   const result = selected();
-  const links = result ? pluginLinks(result.marketplace.repository, result.marketplace.name, result.plugin.name) : null;
+  const plugin = activePlugin ?? result?.plugin;
+  const links = result ? pluginLinks(result.marketplace.repository, result.marketplace.name, plugin.name) : null;
   setLink("marketplace-launch", links?.marketplace);
   setLink("plugin-launch", links?.plugin);
   setLink("session-launch", links?.session);
   if (result) byID("manifest-link").href = result.marketplace.manifestURL;
+  byID("selected-plugin").textContent = result ? `Selected: ${plugin.name}@${result.marketplace.name}` : "";
+}
+
+function filterMarketplace() {
+  const marketplace = selected()?.marketplace;
+  if (!marketplace) return;
+  const query = marketplaceFilter.value.trim().toLowerCase();
+  let visible = 0;
+  [...marketplacePlugins.children].forEach((button, index) => {
+    const plugin = marketplace.plugins[index];
+    button.hidden = !`${plugin.name} ${plugin.description}`.toLowerCase().includes(query);
+    if (!button.hidden) visible++;
+  });
+  byID("marketplace-count").textContent = `${visible} of ${marketplace.plugins.length} plugins · ${marketplace.repository}`;
+}
+
+function renderMarketplace() {
+  const result = selected();
+  marketplaceFilter.value = "";
+  marketplaceBrowser.open = false;
+  marketplacePlugins.replaceChildren();
+  if (!result) return;
+  const { marketplace } = result;
+  byID("marketplace-summary").textContent = `Browse marketplace · ${marketplace.plugins.length} ${marketplace.plugins.length === 1 ? "plugin" : "plugins"}`;
+  for (const plugin of marketplace.plugins) {
+    const choice = document.createElement("button");
+    choice.type = "button";
+    choice.className = "marketplace-choice";
+    choice.dataset.plugin = plugin.name;
+    choice.title = plugin.description;
+    const name = document.createElement("span");
+    name.textContent = plugin.name;
+    const marker = document.createElement("span");
+    marker.className = "choice-marker";
+    choice.append(name, marker);
+    choice.addEventListener("click", () => {
+      activePlugin = plugin;
+      clearDone();
+      updateLinks();
+      updateMarketplaceSelection();
+    });
+    marketplacePlugins.append(choice);
+  }
+  updateMarketplaceSelection();
+  filterMarketplace();
+}
+
+function updateMarketplaceSelection() {
+  const plugin = activePlugin ?? selected()?.plugin;
+  for (const choice of marketplacePlugins.children) {
+    const checked = choice.dataset.plugin === plugin?.name;
+    choice.setAttribute("aria-pressed", String(checked));
+    choice.querySelector(".choice-marker").textContent = checked ? "Selected ✓" : "Select";
+  }
 }
 
 function showMore() {
@@ -142,10 +201,12 @@ function render(marketplaces, searched) {
   const pairs = marketplaces.flatMap((marketplace) => marketplace.plugins.map((plugin) => ({ marketplace, plugin, match: matchesTerm(plugin, searched) })));
   results = [...pairs.filter((pair) => pair.match), ...pairs.filter((pair) => !pair.match)];
   shown = 0;
+  activePlugin = null;
   actions.hidden = true;
   document.body.append(actions);
   options.replaceChildren();
   clearDone();
+  renderMarketplace();
   showMore();
   updateLinks();
 }
@@ -162,6 +223,9 @@ form.addEventListener("submit", async (event) => {
     requestController.abort();
   }, 20000);
   const searched = term.value.trim();
+  const searchURL = new URL(window.location.href);
+  searchURL.searchParams.set("q", searched);
+  window.history.replaceState(null, "", searchURL);
   document.body.classList.replace("home", "searched");
   resultsSection.hidden = false;
   render([], searched);
@@ -195,9 +259,18 @@ form.addEventListener("submit", async (event) => {
 
 options.addEventListener("change", (event) => {
   if (event.target.name !== "result") return;
+  activePlugin = null;
   clearDone();
   event.target.closest(".result").append(actions);
   actions.hidden = false;
   updateLinks();
+  renderMarketplace();
 });
 more.addEventListener("click", showMore);
+marketplaceFilter.addEventListener("input", filterMarketplace);
+
+const initialSearch = new URLSearchParams(window.location.search).get("q")?.trim();
+if (initialSearch) {
+  term.value = initialSearch;
+  form.requestSubmit();
+}
