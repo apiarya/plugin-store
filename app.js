@@ -6,7 +6,8 @@ const source = byID("marketplace-source");
 const sourceError = byID("source-error");
 const status = byID("discovery-status");
 const fields = byID("plugin-fields");
-const select = byID("plugin-select");
+const options = byID("plugin-options");
+const selectedPlugin = () => options.querySelector("input:checked")?.value;
 const target = byID("target-repo");
 const targetError = byID("target-error");
 let marketplace = null;
@@ -48,7 +49,7 @@ function updateLinks() {
   const repository = validRepository(source, sourceError);
   setLink("marketplace-launch", repository ? launchLink("plugins/marketplace/add", { source: repository }) : null);
   const targetRepository = validRepository(target, targetError);
-  const plugin = marketplace?.plugins.find((item) => item.name === select.value);
+  const plugin = marketplace?.plugins.find((item) => item.name === selectedPlugin());
   const links = plugin ? pluginLinks(marketplace.repository, marketplace.name, plugin.name, targetRepository) : null;
   setLink("plugin-launch", links?.plugin);
   setLink("session-launch", links?.session);
@@ -56,11 +57,6 @@ function updateLinks() {
   setStep("step-session", Boolean(plugin));
   byID("prompt-details").hidden = !links;
   byID("prompt-preview").textContent = links?.prompt ?? "";
-  if (plugin) {
-    byID("plugin-name").textContent = plugin.name;
-    byID("plugin-description").textContent = plugin.description;
-    byID("plugin-id").textContent = `${plugin.name}@${marketplace.name}`;
-  }
 }
 
 function resetDiscovery(message = "Choose a marketplace to see its plugins.") {
@@ -69,7 +65,7 @@ function resetDiscovery(message = "Choose a marketplace to see its plugins.") {
   controller = null;
   marketplace = null;
   fields.hidden = true;
-  select.replaceChildren();
+  options.replaceChildren();
   form.removeAttribute("aria-busy");
   status.className = "notice";
   status.textContent = message;
@@ -98,12 +94,24 @@ async function discover() {
     if (controller !== requestController) return;
     marketplace = result;
     byID("manifest-link").href = result.manifestURL;
-    for (const plugin of result.plugins) {
-      const option = document.createElement("option");
-      option.value = plugin.name;
-      option.textContent = plugin.name;
-      select.append(option);
-    }
+    result.plugins.forEach((plugin, index) => {
+      const option = document.createElement("label");
+      option.className = "plugin-option";
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "plugin";
+      radio.value = plugin.name;
+      radio.checked = index === 0;
+      const name = document.createElement("strong");
+      name.textContent = plugin.name;
+      const description = document.createElement("span");
+      description.textContent = plugin.description;
+      const body = document.createElement("span");
+      body.className = "plugin-option-body";
+      body.append(name, description);
+      option.append(radio, body);
+      options.append(option);
+    });
     if (result.plugins.length === 0) {
       status.textContent = `The "${result.name}" marketplace has no plugins listed in its manifest. Try another marketplace.`;
     } else {
@@ -141,7 +149,7 @@ form.addEventListener("submit", (event) => {
   discover();
 });
 
-select.addEventListener("change", updateLinks);
+options.addEventListener("change", updateLinks);
 target.addEventListener("input", updateLinks);
 
 discover();

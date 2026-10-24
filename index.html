@@ -48,13 +48,9 @@
               <h2>Pick a plugin</h2>
               <p>Plugins come from the marketplace manifest.</p>
               <div id="discovery-status" class="notice" role="status" aria-live="polite" aria-atomic="true">Choose a marketplace to see its plugins.</div>
-              <div id="plugin-fields" hidden>
-                <div class="field-heading"><label for="plugin-select">Plugin</label><a id="manifest-link" class="small-link" target="_blank" rel="noopener noreferrer">View manifest ↗</a></div>
-                <select id="plugin-select" aria-describedby="plugin-description"></select>
-                <div class="plugin-detail">
-                  <span class="plugin-glyph" aria-hidden="true">✦</span>
-                  <div><h3 id="plugin-name"></h3><p id="plugin-description"></p><code id="plugin-id"></code></div>
-                </div>
+              <div id="plugin-fields" class="plugin-list" hidden>
+                <div class="field-heading"><span id="plugin-label" class="list-label">Plugin</span><a id="manifest-link" class="small-link" target="_blank" rel="noopener noreferrer">View manifest ↗</a></div>
+                <div id="plugin-options" role="radiogroup" aria-labelledby="plugin-label"></div>
               </div>
               <a id="plugin-launch" class="launch-button primary" aria-disabled="true" tabindex="-1">Install plugin in GitHub Copilot <span aria-hidden="true">↗</span></a>
             </div>

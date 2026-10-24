@@ -42,10 +42,17 @@ button:disabled { opacity: .65; cursor: wait; }
 .notice.success { color: #40614b; background: #f2f9f3; border-color: #dcecdf; }
 .field-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .small-link { font-size: 11px; text-decoration: none; }
-.plugin-detail { display: flex; gap: 13px; margin-top: 16px; padding: 17px; background: #faf8ff; border: 1px solid #ece6fa; border-radius: 12px; overflow-wrap: anywhere; }
-.plugin-glyph { font-size: 26px; color: #8259d1; }
+.list-label { display: block; font-weight: 650; font-size: 12px; margin: 18px 0 8px; }
+.plugin-list .field-heading { align-items: center; }
+#plugin-options { display: grid; gap: 8px; }
+.plugin-option { display: flex; gap: 12px; align-items: flex-start; margin: 0; padding: 14px; border: 1px solid #e3dfeb; border-radius: 10px; cursor: pointer; font-weight: 400; overflow-wrap: anywhere; }
+.plugin-option:hover { border-color: #c4b2e8; }
+.plugin-option:has(input:checked) { border-color: var(--purple); background: #faf8ff; box-shadow: 0 0 0 1px var(--purple); }
+.plugin-option input { width: 16px; min-height: 0; height: 16px; margin: 2px 0 0; padding: 0; flex: none; accent-color: var(--purple); }
+.plugin-option-body { display: grid; gap: 4px; }
+.plugin-option strong { font-size: 13px; color: #242334; }
+.plugin-option-body > span { font-size: 12px; line-height: 1.6; color: var(--muted); white-space: pre-line; }
 h3 { margin: 0 0 6px; font-size: 14px; font-weight: 700; }
-.plugin-detail p { font-size: 12px; line-height: 1.7; color: var(--muted); margin: 0 0 12px; white-space: pre-line; }
 code { display: inline-block; color: #6b4a9c; font-size: 10px; line-height: 1.6; background: #f0eafa; padding: 3px 6px; border-radius: 5px; word-break: break-all; }
 .steps { list-style: none; padding: 0; margin: 0; }
 .steps li { display: flex; gap: 16px; position: relative; padding-bottom: 32px; transition: opacity .2s; }
