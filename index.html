@@ -30,15 +30,13 @@
               <h2>Choose a marketplace</h2>
               <p>Pick a favorite or type any public GitHub marketplace.</p>
               <form id="marketplace-form">
-                <label for="marketplace-preset">Marketplace</label>
-                <select id="marketplace-preset">
-                  <option value="anthropics/life-sciences">Life Sciences · anthropics/life-sciences</option>
-                  <option value="microsoft/work-iq">Work IQ · microsoft/work-iq</option>
-                  <option value="">Custom GitHub marketplace</option>
-                </select>
-                <label for="marketplace-source">Marketplace repository</label>
-                <input id="marketplace-source" name="marketplace" value="anthropics/life-sciences" placeholder="owner/repository or GitHub URL" required autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="source-help source-error">
-                <p class="field-help" id="source-help">Public GitHub repositories only.</p>
+                <label for="marketplace-source">Marketplace</label>
+                <input id="marketplace-source" name="marketplace" list="marketplace-presets" value="anthropics/life-sciences" placeholder="Select or type owner/repository" required autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="source-help source-error">
+                <datalist id="marketplace-presets">
+                  <option value="anthropics/life-sciences" label="Life Sciences"></option>
+                  <option value="microsoft/work-iq" label="Work IQ"></option>
+                </datalist>
+                <p class="field-help" id="source-help">Pick a suggestion or type any public GitHub repository or URL.</p>
                 <p id="source-error" class="field-error" aria-live="polite"></p>
               </form>
               <a id="marketplace-launch" class="launch-button primary" aria-disabled="true" tabindex="-1">Run in GitHub Copilot <span aria-hidden="true">↗</span></a>

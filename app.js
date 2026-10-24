@@ -2,7 +2,6 @@ import { discoverMarketplace, launchLink, parseRepository, pluginLinks } from ".
 
 const byID = (id) => document.getElementById(id);
 const form = byID("marketplace-form");
-const preset = byID("marketplace-preset");
 const source = byID("marketplace-source");
 const sourceError = byID("source-error");
 const status = byID("discovery-status");
@@ -132,17 +131,7 @@ async function discover() {
   }
 }
 
-preset.addEventListener("change", () => {
-  source.value = preset.value;
-  if (preset.value) discover();
-  else {
-    resetDiscovery();
-    source.focus();
-  }
-});
-
 source.addEventListener("input", () => {
-  preset.value = [...preset.options].some((option) => option.value === source.value.trim()) ? source.value.trim() : "";
   resetDiscovery();
   debounce = setTimeout(discover, 600);
 });

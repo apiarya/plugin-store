@@ -153,10 +153,12 @@ test("query values round-trip special characters without adding parameters", () 
 test("page has accessible labels, initially disabled links, no prefilled target, and safe rendering", async () => {
   const html = await readFile(new URL("./index.html", import.meta.url), "utf8");
   const script = await readFile(new URL("./app.js", import.meta.url), "utf8");
-  for (const id of ["marketplace-preset", "marketplace-source", "plugin-select", "target-repo"]) {
+  for (const id of ["marketplace-source", "plugin-select", "target-repo"]) {
     assert.ok(html.includes(`for="${id}"`));
     assert.ok(html.includes(`id="${id}"`));
   }
+  assert.match(html, /<input id="marketplace-source"[^>]*list="marketplace-presets"/);
+  assert.match(html, /<datalist id="marketplace-presets">/);
   assert.match(html, /role="status" aria-live="polite"/);
   const targetInput = html.match(/<input id="target-repo"[^>]*>/)[0];
   assert.ok(!targetInput.includes("value="));
