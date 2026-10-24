@@ -124,13 +124,12 @@ export function pluginLinks(repository, marketplace, plugin, targetRepository = 
 
 export function searchQueries(term) {
   const words = term.replace(/[^\w.\s-]+/g, " ").replace(/\s+/g, " ").trim();
-  return [`${words} claude plugin`.trim(), `${words} topic:claude-code-plugins`.trim()];
+  return [words, `${words} plugin`];
 }
 
 async function searchRepositories(query, fetchImpl, signal, limit) {
   const url = new URL("https://api.github.com/search/repositories");
   url.searchParams.set("q", query);
-  url.searchParams.set("sort", "stars");
   url.searchParams.set("per_page", String(limit));
   const response = await fetchImpl(url.href, { signal, headers: { Accept: "application/vnd.github+json" } });
   if (!response.ok) throw responseError(response, "Could not search GitHub");
@@ -172,7 +171,7 @@ async function readManifest(item, fetchImpl, signal) {
   return null;
 }
 
-export async function findMarketplaces(term, { fetchImpl = fetch, signal, limit = 20 } = {}) {
+export async function findMarketplaces(term, { fetchImpl = fetch, signal, limit = 50 } = {}) {
   if (term.includes("/")) {
     return [await discoverMarketplace(term, { fetchImpl, signal })];
   }
@@ -191,13 +190,5 @@ export async function findMarketplaces(term, { fetchImpl = fetch, signal, limit 
     if (error.name === "AbortError") throw error;
     return null;
   })));
-  return found
-    .filter((marketplace) => marketplace && marketplace.plugins.length > 0)
-    .map((marketplace) => ({
-      marketplace,
-      nameMatch: Number(marketplaceMatchesTerm(marketplace, term)),
-      matches: marketplace.plugins.filter((plugin) => matchesTerm(plugin, term)).length,
-    }))
-    .sort((a, b) => b.nameMatch - a.nameMatch || b.matches - a.matches || b.marketplace.stars - a.marketplace.stars)
-    .map(({ marketplace }) => marketplace);
+  return found.filter((marketplace) => marketplace && marketplace.plugins.length > 0);
 }

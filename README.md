@@ -6,7 +6,7 @@ A single-page, browser-only launcher for public GitHub marketplace plugins in th
 
 ## Use it
 
-1. Search for any word (for example `security` or `postgres`), or enter a repository as `owner/repository`. The page runs two public GitHub repository searches (`<term> claude plugin` and `<term> topic:claude-code-plugins`), keeps only repositories with a marketplace manifest, and ranks marketplaces whose name or repository matches first, then those with the most matching plugins, then by stars. Pick one and select **Add marketplace to GitHub Copilot**.
+1. Search for any word (for example `security` or `postgres`), or enter a repository as `owner/repository`. The page runs two public GitHub repository searches (`<term>` and `<term> plugin`), keeps only repositories that contain a marketplace manifest, and lists them in GitHub's best-match order. Pick one and select **Add marketplace to GitHub Copilot**.
 2. Pick a plugin (plugins matching your search are listed first) and select **Install plugin in GitHub Copilot**. Each button opens Copilot's confirmation form; confirm the action in the app.
 3. Enter your own target repository, then select **Ask “What can you do?”** to open an interactive session requesting the selected plugin.
 
