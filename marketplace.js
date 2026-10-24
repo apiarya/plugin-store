@@ -65,8 +65,11 @@ async function readJSON(response) {
 function responseError(response, context) {
   if (response.status === 429 || (response.status === 403 && response.headers.get("x-ratelimit-remaining") === "0")) {
     const reset = Number(response.headers.get("x-ratelimit-reset"));
-    const retry = reset > 0 ? ` Try again after ${new Date(reset * 1000).toLocaleTimeString()}.` : " Please wait a few minutes and try again.";
-    return new Error(`GitHub's public request rate limit was reached.${retry}`);
+    const retryAfter = Number(response.headers.get("retry-after"));
+    const retryAt = reset > 0 ? reset * 1000 : retryAfter > 0 ? Date.now() + retryAfter * 1000 : Date.now() + 60000;
+    const error = new Error(`GitHub's public request rate limit was reached. Try again after ${new Date(retryAt).toLocaleTimeString()}.`);
+    error.retryAt = retryAt;
+    return error;
   }
   if (response.status === 403) {
     return new Error("GitHub denied access to this repository. It must be public and available without signing in.");
@@ -179,7 +182,7 @@ export async function findMarketplaces(term, { fetchImpl = fetch, signal, limit 
   }
   if (!term.trim()) throw new Error("Type a word to search for, such as security or postgres.");
   const searches = await Promise.allSettled(searchQueries(term).map((query) => searchRepositories(query, fetchImpl, signal, limit)));
-  if (searches.every((search) => search.status === "rejected")) throw searches[0].reason;
+  if (searches.every((search) => search.status === "rejected")) throw searches.find((search) => search.reason?.retryAt)?.reason ?? searches[0].reason;
   const seen = new Set();
   const items = searches.flatMap((search) => search.status === "fulfilled" ? search.value : []).filter((item) => {
     if (typeof item?.full_name !== "string" || item.private || typeof item.default_branch !== "string" || !item.default_branch) return false;

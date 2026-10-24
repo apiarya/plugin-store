@@ -219,7 +219,8 @@ test("findMarketplaces keeps only repositories with valid manifests in GitHub or
   assert.equal(results[0].description, "First");
   assert.equal(requests.filter((url) => url.includes("raw.githubusercontent.com/B/Two")).length, 0);
   assert.ok(!requests.some((url) => url.includes("e/private")));
-  await assert.rejects(findMarketplaces("x", { fetchImpl: async () => jsonResponse({}, 403, { "x-ratelimit-remaining": "0" }) }), /rate limit/);
+  await assert.rejects(findMarketplaces("x", { fetchImpl: async () => jsonResponse({}, 403, { "x-ratelimit-remaining": "0", "x-ratelimit-reset": "2000000000" }) }), (error) => /rate limit/.test(error.message) && error.retryAt === 2000000000000);
+  await assert.rejects(findMarketplaces("x", { fetchImpl: async () => jsonResponse({}, 429, { "retry-after": "30" }) }), (error) => error.retryAt > Date.now() + 25000);
   const partial = await findMarketplaces("x", {
     fetchImpl: async (url) => {
       if (url.includes("q=x+plugin")) return jsonResponse({}, 403, { "x-ratelimit-remaining": "0" });

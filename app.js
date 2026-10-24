@@ -16,6 +16,7 @@ const targetError = byID("target-error");
 let results = [];
 let shown = 0;
 let controller = null;
+let retryTimer = null;
 
 try {
   target.value = localStorage.getItem(TARGET_KEY) ?? "";
@@ -36,12 +37,33 @@ function setLink(id, href) {
   }
 }
 
+function cancelRetry() {
+  clearInterval(retryTimer);
+  retryTimer = null;
+}
+
+function scheduleRetry(retryAt) {
+  const wait = Math.min(Math.max(retryAt - Date.now(), 1000), 300000);
+  const end = Date.now() + wait;
+  const tick = () => {
+    const seconds = Math.ceil((end - Date.now()) / 1000);
+    if (seconds <= 0) {
+      cancelRetry();
+      form.requestSubmit();
+      return;
+    }
+    setStatus(`GitHub's search limit was reached. Retrying in ${seconds}s…`, "error");
+  };
+  retryTimer = setInterval(tick, 1000);
+  tick();
+}
+
 function setStatus(message, kind = "") {
   status.className = `status ${kind}`.trim();
   status.textContent = message;
 }
 
-function option(value, title, meta, description) {
+function option(value, repository, title, stars, description) {
   const label = document.createElement("label");
   label.className = "option";
   const radio = document.createElement("input");
@@ -52,9 +74,15 @@ function option(value, title, meta, description) {
   heading.className = "option-heading";
   const name = document.createElement("strong");
   name.textContent = title;
-  const extra = document.createElement("small");
-  extra.textContent = meta;
-  heading.append(name, extra);
+  const source = document.createElement("small");
+  source.textContent = `${repository} /`;
+  heading.append(source, name);
+  if (stars) {
+    const reputation = document.createElement("small");
+    reputation.className = "stars";
+    reputation.textContent = stars;
+    heading.append(reputation);
+  }
   const body = document.createElement("span");
   body.className = "option-body";
   body.append(heading);
@@ -97,8 +125,7 @@ function updateLinks() {
 function showMore() {
   results.slice(shown, shown + PAGE_SIZE).forEach(({ marketplace, plugin }, offset) => {
     const stars = marketplace.stars ? `★ ${marketplace.stars.toLocaleString()}` : "";
-    const meta = [`${marketplace.name} marketplace`, marketplace.repository, stars].filter(Boolean).join(" · ");
-    options.append(option(String(shown + offset), plugin.name, meta, plugin.description || marketplace.description));
+    options.append(option(String(shown + offset), marketplace.repository, plugin.name, stars, plugin.description || marketplace.description));
   });
   shown = Math.min(results.length, shown + PAGE_SIZE);
   more.hidden = shown >= results.length;
@@ -117,6 +144,7 @@ function render(marketplaces, searched) {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  cancelRetry();
   controller?.abort();
   const requestController = new AbortController();
   controller = requestController;
@@ -144,6 +172,7 @@ form.addEventListener("submit", async (event) => {
   } catch (error) {
     if (controller !== requestController) return;
     if (timedOut) setStatus("GitHub took too long to respond. Check your connection and try again.", "error");
+    else if (error.retryAt) scheduleRetry(error.retryAt);
     else if (error instanceof TypeError) setStatus("Could not reach GitHub. Check your connection or browser network restrictions, then try again.", "error");
     else setStatus(error.message, "error");
   } finally {
