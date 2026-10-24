@@ -169,6 +169,17 @@ test("page has accessible labels, initially disabled links, and safe rendering",
   assert.ok(!helper.includes("innerHTML"));
 });
 
+test("Pages deployment includes the launch handoff and its dependencies", async () => {
+  const workflow = await readFile(new URL("./.github/workflows/pages.yml", import.meta.url), "utf8");
+  const copy = workflow.match(/^\s*cp (.+) _site\/\s*$/m);
+  assert.ok(copy, "Expected a static site asset copy step");
+  const assets = copy[1].split(/\s+/);
+  for (const asset of ["index.html", "launch.html", "styles.css", "app.js", "launch.js", "marketplace.js", "icon.svg"]) {
+    assert.ok(assets.includes(asset), `Missing deployment asset: ${asset}`);
+    await readFile(new URL(`./${asset}`, import.meta.url));
+  }
+});
+
 test("search queries and plugin matching", () => {
   assert.deepEqual(searchQueries("postgres"), ["postgres", "user:postgres", "postgres plugin"]);
   assert.deepEqual(searchQueries('a:b "c"'), ["a b c", "a b c plugin"]);

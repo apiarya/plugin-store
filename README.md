@@ -27,7 +27,7 @@ Open http://localhost:8000. Serve over HTTP rather than opening `index.html` dir
 
 ## Deployment
 
-In repository **Settings → Pages**, select **GitHub Actions** as the source. Push to `main` to run `.github/workflows/pages.yml`, which runs the tests and deploys only the static site assets. The workflow can also be started manually. No tokens, secrets, package installation, or backend are required.
+In repository **Settings → Pages**, select **GitHub Actions** as the source. Push to `main` to run `.github/workflows/pages.yml`, which runs the tests and deploys only the static site assets, including `launch.html` and `launch.js` for the Copilot handoff. The workflow can also be started manually. No tokens, secrets, package installation, or backend are required.
 
 ## Privacy and trust
 
