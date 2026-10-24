@@ -45,6 +45,7 @@ export function parseManifest(manifest) {
     return {
       name: plugin.name,
       description: typeof plugin.description === "string" ? plugin.description.slice(0, 2000) : "No description provided by this marketplace.",
+      version: typeof plugin.version === "string" ? plugin.version.trim().slice(0, 100) : "",
     };
   });
   return { name: manifest.name, plugins };

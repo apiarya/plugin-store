@@ -35,7 +35,7 @@ test("rejects ambiguous, unsafe, and non-GitHub repository inputs", () => {
 test("reads actual marketplace and plugin names and supports skill-only plugins", () => {
   assert.deepEqual(parseManifest(example), {
     name: "life-sciences",
-    plugins: [{ name: "clinical-trial-protocol", description: "Develop clinical trial protocols." }],
+    plugins: [{ name: "clinical-trial-protocol", description: "Develop clinical trial protocols.", version: "" }],
   });
   assert.equal(parseManifest({ name: "manifest-not-repo", plugins: [{ name: "actual-plugin" }] }).plugins[0].name, "actual-plugin");
   assert.deepEqual(parseManifest({ name: "empty", plugins: [] }), { name: "empty", plugins: [] });
@@ -44,6 +44,19 @@ test("reads actual marketplace and plugin names and supports skill-only plugins"
 test("rejects invalid manifest structure and ambiguous identifiers", () => {
   for (const manifest of [null, [], {}, { name: "../bad", plugins: [] }, { name: "valid" }, { name: "valid", plugins: {} }, { name: "valid", plugins: [null] }, { name: "valid", plugins: [{ name: "bad@name" }] }, { name: "valid", plugins: [{ name: "one" }, { name: "one" }] }]) {
     assert.throws(() => parseManifest(manifest));
+  }
+});
+
+test("reads only plugin versions, omitting missing or invalid values and bounding text", () => {
+  for (const [version, expected] of [
+    [" 1.2.3 ", "1.2.3"], ["v2.0.0-beta.1", "v2.0.0-beta.1"],
+    [undefined, ""], [null, ""], [12, ""], [{}, ""], ["   ", ""],
+    ["x".repeat(101), "x".repeat(100)], ["<img src=x>", "<img src=x>"],
+  ]) {
+    const manifest = parseManifest({
+      name: "tools", metadata: { version: "9.0.0" }, plugins: [{ name: "lint", version }],
+    });
+    assert.equal(manifest.plugins[0].version, expected);
   }
 });
 

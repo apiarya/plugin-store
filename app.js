@@ -33,19 +33,26 @@ function clearDone() {
   });
 }
 
-function highlightMarketplaceStep() {
-  const link = byID("marketplace-launch");
-  link.classList.add("next-step");
-  link.setAttribute("aria-current", "step");
+function highlightStep(link = launchButtons[0]) {
+  if (!link.href) return;
+  launchButtons.forEach((button) => {
+    button.classList.toggle("next-step", button === link);
+    if (button === link) button.setAttribute("aria-current", "step");
+    else button.removeAttribute("aria-current");
+  });
 }
 
-launchButtons.forEach((link) => link.addEventListener("click", (event) => {
-  if (!link.href) return;
-  const tab = window.open(link.href, "_blank");
-  if (!tab) return;
-  event.preventDefault();
-  launched = { link, tab };
-}));
+launchButtons.forEach((link) => {
+  link.addEventListener("focus", () => highlightStep(link));
+  link.addEventListener("click", (event) => {
+    if (!link.href) return;
+    highlightStep(link);
+    const tab = window.open(link.href, "_blank");
+    if (!tab) return;
+    event.preventDefault();
+    launched = { link, tab };
+  });
+});
 
 function returned() {
   if (!launched || document.hidden || !document.hasFocus()) return;
@@ -237,10 +244,20 @@ function renderPluginPage() {
     const name = document.createElement("strong");
     name.className = "choice-title";
     name.textContent = plugin.name;
+    const heading = document.createElement("span");
+    heading.className = "choice-heading";
+    heading.append(name);
+    if (plugin.version) {
+      const version = document.createElement("span");
+      version.className = "choice-version";
+      version.textContent = plugin.version;
+      version.setAttribute("aria-label", `Version ${plugin.version}`);
+      heading.append(version);
+    }
     const description = document.createElement("span");
     description.className = "choice-description";
     description.textContent = plugin.description || "No description provided by this marketplace.";
-    content.append(name, description);
+    content.append(heading, description);
     const marker = document.createElement("span");
     marker.className = "choice-marker";
     choice.append(content, marker);
@@ -249,7 +266,7 @@ function renderPluginPage() {
       clearDone();
       updateLinks();
       updateMarketplaceSelection();
-      highlightMarketplaceStep();
+      highlightStep();
       byID("marketplace-launch").focus();
     });
     marketplacePlugins.append(choice);
@@ -317,8 +334,8 @@ form.addEventListener("submit", async (event) => {
     const count = results.reduce((total, { marketplace }) => total + marketplace.plugins.length, 0);
     const marketplaceCount = results.length;
     setStatus(marketplaceCount
-      ? `${marketplaceCount} ${marketplaceCount === 1 ? "marketplace" : "marketplaces"} with ${count} ${count === 1 ? "plugin" : "plugins"}. Select a marketplace to browse its plugins.`
-      : `No marketplaces found for “${searched}”. Try another word or a GitHub owner name.`);
+      ? `${marketplaceCount} ${marketplaceCount === 1 ? "marketplace" : "marketplaces"} · ${count} ${count === 1 ? "plugin" : "plugins"}`
+      : "No marketplaces found.");
   } catch (error) {
     if (controller !== requestController) return;
     if (timedOut) setStatus("GitHub took too long to respond. Check your connection and try again.", "error");
@@ -343,8 +360,8 @@ options.addEventListener("change", (event) => {
   actions.hidden = false;
   updateLinks();
   renderMarketplace();
-  highlightMarketplaceStep();
-  marketplaceFilter.focus();
+  highlightStep();
+  byID("marketplace-launch").focus();
 });
 more.addEventListener("click", showMore);
 marketplaceFilter.addEventListener("input", filterMarketplace);
