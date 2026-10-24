@@ -1,10 +1,10 @@
-import { discoverMarketplace, parseRepository, pluginLinks } from "./marketplace.js";
+import { discoverMarketplace, launchLink, parseRepository, pluginLinks } from "./marketplace.js";
 
 const byID = (id) => document.getElementById(id);
 const form = byID("marketplace-form");
 const preset = byID("marketplace-preset");
 const source = byID("marketplace-source");
-const button = byID("discover-button");
+const sourceError = byID("source-error");
 const status = byID("discovery-status");
 const fields = byID("plugin-fields");
 const select = byID("plugin-select");
@@ -12,6 +12,7 @@ const target = byID("target-repo");
 const targetError = byID("target-error");
 let marketplace = null;
 let controller = null;
+let debounce = null;
 
 function setLink(id, href) {
   const link = byID(id);
@@ -26,23 +27,34 @@ function setLink(id, href) {
   }
 }
 
-function updateLinks() {
-  let targetRepository = "";
-  targetError.textContent = "";
-  target.removeAttribute("aria-invalid");
-  if (target.value.trim()) {
-    try {
-      targetRepository = parseRepository(target.value);
-    } catch (error) {
-      targetError.textContent = error.message;
-      target.setAttribute("aria-invalid", "true");
-    }
+function setStep(id, enabled) {
+  if (enabled) byID(id).removeAttribute("aria-disabled");
+  else byID(id).setAttribute("aria-disabled", "true");
+}
+
+function validRepository(input, error) {
+  error.textContent = "";
+  input.removeAttribute("aria-invalid");
+  if (!input.value.trim()) return "";
+  try {
+    return parseRepository(input.value);
+  } catch (err) {
+    error.textContent = err.message;
+    input.setAttribute("aria-invalid", "true");
+    return "";
   }
+}
+
+function updateLinks() {
+  const repository = validRepository(source, sourceError);
+  setLink("marketplace-launch", repository ? launchLink("plugins/marketplace/add", { source: repository }) : null);
+  const targetRepository = validRepository(target, targetError);
   const plugin = marketplace?.plugins.find((item) => item.name === select.value);
   const links = plugin ? pluginLinks(marketplace.repository, marketplace.name, plugin.name, targetRepository) : null;
-  setLink("marketplace-launch", links?.marketplace);
   setLink("plugin-launch", links?.plugin);
   setLink("session-launch", links?.session);
+  setStep("step-plugin", Boolean(marketplace));
+  setStep("step-session", Boolean(plugin));
   byID("prompt-details").hidden = !links;
   byID("prompt-preview").textContent = links?.prompt ?? "";
   if (plugin) {
@@ -52,38 +64,27 @@ function updateLinks() {
   }
 }
 
-function resetDiscovery() {
+function resetDiscovery(message = "Choose a marketplace to see its plugins.") {
+  clearTimeout(debounce);
   controller?.abort();
   controller = null;
   marketplace = null;
   fields.hidden = true;
   select.replaceChildren();
   form.removeAttribute("aria-busy");
-  button.disabled = false;
-  button.textContent = "Find plugins →";
   status.className = "notice";
-  status.textContent = "Choose a marketplace, then select Find plugins.";
+  status.textContent = message;
   updateLinks();
 }
 
-preset.addEventListener("change", () => {
-  source.value = preset.value;
+async function discover() {
   resetDiscovery();
-  if (!preset.value) source.focus();
-});
-
-source.addEventListener("input", () => {
-  preset.value = [...preset.options].some((option) => option.value === source.value.trim()) ? source.value.trim() : "";
-  source.removeAttribute("aria-invalid");
-  resetDiscovery();
-});
-
-select.addEventListener("change", updateLinks);
-target.addEventListener("input", updateLinks);
-
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  resetDiscovery();
+  let repository;
+  try {
+    repository = parseRepository(source.value);
+  } catch {
+    return;
+  }
   const requestController = new AbortController();
   controller = requestController;
   let timedOut = false;
@@ -91,14 +92,10 @@ form.addEventListener("submit", async (event) => {
     timedOut = true;
     requestController.abort();
   }, 20000);
-  button.disabled = true;
-  button.textContent = "Finding plugins…";
   form.setAttribute("aria-busy", "true");
   status.textContent = "Reading the marketplace manifest from GitHub…";
   try {
-    parseRepository(source.value);
-    source.removeAttribute("aria-invalid");
-    const result = await discoverMarketplace(source.value, { signal: requestController.signal });
+    const result = await discoverMarketplace(repository, { signal: requestController.signal });
     if (controller !== requestController) return;
     marketplace = result;
     byID("manifest-link").href = result.manifestURL;
@@ -112,7 +109,7 @@ form.addEventListener("submit", async (event) => {
       status.textContent = `The "${result.name}" marketplace has no plugins listed in its manifest. Try another marketplace.`;
     } else {
       status.className = "notice success";
-      status.textContent = `${result.plugins.length} ${result.plugins.length === 1 ? "plugin" : "plugins"} found in ${result.name}. Pick one below to get started.`;
+      status.textContent = `${result.plugins.length} ${result.plugins.length === 1 ? "plugin" : "plugins"} found in ${result.name}.`;
       fields.hidden = false;
     }
     updateLinks();
@@ -126,18 +123,36 @@ form.addEventListener("submit", async (event) => {
     } else {
       status.textContent = error.message;
     }
-    try {
-      parseRepository(source.value);
-    } catch {
-      source.setAttribute("aria-invalid", "true");
-    }
   } finally {
     clearTimeout(timeout);
     if (controller === requestController) {
       controller = null;
       form.removeAttribute("aria-busy");
-      button.disabled = false;
-      button.textContent = "Find plugins →";
     }
   }
+}
+
+preset.addEventListener("change", () => {
+  source.value = preset.value;
+  if (preset.value) discover();
+  else {
+    resetDiscovery();
+    source.focus();
+  }
 });
+
+source.addEventListener("input", () => {
+  preset.value = [...preset.options].some((option) => option.value === source.value.trim()) ? source.value.trim() : "";
+  resetDiscovery();
+  debounce = setTimeout(discover, 600);
+});
+
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  discover();
+});
+
+select.addEventListener("change", updateLinks);
+target.addEventListener("input", updateLinks);
+
+discover();

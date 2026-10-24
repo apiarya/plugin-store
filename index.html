@@ -24,61 +24,61 @@
         <p class="intro-copy">Find a marketplace, pick a plugin, and bring a new capability to the GitHub Copilot desktop app.</p>
       </section>
 
-      <div class="workspace">
-        <section class="card picker" aria-labelledby="discover-title">
-          <div class="section-heading"><span class="label-icon" aria-hidden="true">⌘</span><div><h2 id="discover-title">Find your plugin</h2><p>Start with a marketplace you know, or explore a favorite.</p></div></div>
-          <form id="marketplace-form">
-            <label for="marketplace-preset">Marketplace</label>
-            <select id="marketplace-preset">
-              <option value="anthropics/life-sciences">Life Sciences · anthropics/life-sciences</option>
-              <option value="microsoft/work-iq">Work IQ · microsoft/work-iq</option>
-              <option value="">Custom GitHub marketplace</option>
-            </select>
-            <label for="marketplace-source">Marketplace repository</label>
-            <div class="input-action">
-              <input id="marketplace-source" name="marketplace" value="anthropics/life-sciences" placeholder="owner/repository or GitHub URL" required autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="source-help">
-              <button id="discover-button" type="submit">Find plugins <span aria-hidden="true">→</span></button>
+      <section class="card flow" aria-label="Run a plugin in GitHub Copilot">
+        <ol class="steps">
+          <li class="step" id="step-marketplace">
+            <span class="step-number" aria-hidden="true">1</span>
+            <div class="step-content">
+              <h2>Choose a marketplace</h2>
+              <p>Pick a favorite or type any public GitHub marketplace.</p>
+              <form id="marketplace-form">
+                <label for="marketplace-preset">Marketplace</label>
+                <select id="marketplace-preset">
+                  <option value="anthropics/life-sciences">Life Sciences · anthropics/life-sciences</option>
+                  <option value="microsoft/work-iq">Work IQ · microsoft/work-iq</option>
+                  <option value="">Custom GitHub marketplace</option>
+                </select>
+                <label for="marketplace-source">Marketplace repository</label>
+                <input id="marketplace-source" name="marketplace" value="anthropics/life-sciences" placeholder="owner/repository or GitHub URL" required autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="source-help source-error">
+                <p class="field-help" id="source-help">Public GitHub repositories only.</p>
+                <p id="source-error" class="field-error" aria-live="polite"></p>
+              </form>
+              <a id="marketplace-launch" class="launch-button primary" aria-disabled="true" tabindex="-1">Run in GitHub Copilot <span aria-hidden="true">↗</span></a>
             </div>
-            <p class="field-help" id="source-help">Public GitHub repositories only. Plugin names come from the marketplace manifest.</p>
-          </form>
-          <div id="discovery-status" class="notice" role="status" aria-live="polite" aria-atomic="true">Choose a marketplace, then select Find plugins.</div>
-          <div id="plugin-fields" hidden>
-            <div class="field-heading"><label for="plugin-select">Plugin</label><a id="manifest-link" class="small-link" target="_blank" rel="noopener noreferrer">View manifest ↗</a></div>
-            <select id="plugin-select" aria-describedby="plugin-description"></select>
-            <div class="plugin-detail">
-              <span class="plugin-glyph" aria-hidden="true">✦</span>
-              <div><h3 id="plugin-name"></h3><p id="plugin-description"></p><code id="plugin-id"></code></div>
-            </div>
-          </div>
-          <div class="privacy-note"><span aria-hidden="true">◇</span><p>No sign-in. No tokens. Marketplace data is fetched directly from GitHub in your browser.</p></div>
-        </section>
-
-        <section class="card launchpad" aria-labelledby="launch-title">
-          <div class="section-heading"><span class="label-icon purple" aria-hidden="true">↗</span><div><h2 id="launch-title">Take it for a spin</h2><p>Three steps. You stay in control.</p></div></div>
-          <ol class="steps">
-            <li>
-              <span class="step-number" aria-hidden="true">1</span>
-              <div class="step-content"><h3>Add the marketplace</h3><p>Review and confirm the marketplace in Copilot.</p><a id="marketplace-launch" class="launch-button" aria-disabled="true" tabindex="-1">Add marketplace <span aria-hidden="true">↗</span></a></div>
-            </li>
-            <li>
-              <span class="step-number" aria-hidden="true">2</span>
-              <div class="step-content"><h3>Install your plugin</h3><p>Review the plugin and confirm its installation.</p><a id="plugin-launch" class="launch-button" aria-disabled="true" tabindex="-1">Install plugin <span aria-hidden="true">↗</span></a></div>
-            </li>
-            <li>
-              <span class="step-number" aria-hidden="true">3</span>
-              <div class="step-content"><h3>Start a conversation</h3><p>Choose the repository you want to work in, not the marketplace source.</p>
-                <label for="target-repo">Your target repository</label>
-                <input id="target-repo" placeholder="owner/your-project" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="target-help target-error">
-                <p class="field-help" id="target-help">Required by Copilot to open a new interactive session.</p>
-                <p id="target-error" class="field-error" aria-live="polite"></p>
-                <a id="session-launch" class="launch-button primary" aria-disabled="true" tabindex="-1">Ask “What can you do?” <span aria-hidden="true">↗</span></a>
+          </li>
+          <li class="step" id="step-plugin" aria-disabled="true">
+            <span class="step-number" aria-hidden="true">2</span>
+            <div class="step-content">
+              <h2>Pick a plugin</h2>
+              <p>Plugins come from the marketplace manifest.</p>
+              <div id="discovery-status" class="notice" role="status" aria-live="polite" aria-atomic="true">Choose a marketplace to see its plugins.</div>
+              <div id="plugin-fields" hidden>
+                <div class="field-heading"><label for="plugin-select">Plugin</label><a id="manifest-link" class="small-link" target="_blank" rel="noopener noreferrer">View manifest ↗</a></div>
+                <select id="plugin-select" aria-describedby="plugin-description"></select>
+                <div class="plugin-detail">
+                  <span class="plugin-glyph" aria-hidden="true">✦</span>
+                  <div><h3 id="plugin-name"></h3><p id="plugin-description"></p><code id="plugin-id"></code></div>
+                </div>
               </div>
-            </li>
-          </ol>
-          <details id="prompt-details" hidden><summary>Preview your opening prompt</summary><p id="prompt-preview"></p></details>
-          <p class="launch-note">Links open the <a href="https://github.com/copilot">GitHub Copilot desktop app</a>. Finish each confirmation there before continuing. This page cannot check installation status or force a plugin to activate; the opening prompt requests its use.</p>
-        </section>
-      </div>
+              <a id="plugin-launch" class="launch-button primary" aria-disabled="true" tabindex="-1">Install plugin in GitHub Copilot <span aria-hidden="true">↗</span></a>
+            </div>
+          </li>
+          <li class="step" id="step-session" aria-disabled="true">
+            <span class="step-number" aria-hidden="true">3</span>
+            <div class="step-content">
+              <h2>Ask what it can do</h2>
+              <p>Opens a new chat that asks the plugin “What can you do?”</p>
+              <label for="target-repo">Repository to work in</label>
+              <input id="target-repo" placeholder="owner/your-project" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="target-help target-error">
+              <p class="field-help" id="target-help">Required by Copilot to open a session. Use your own project, not the marketplace.</p>
+              <p id="target-error" class="field-error" aria-live="polite"></p>
+              <a id="session-launch" class="launch-button primary" aria-disabled="true" tabindex="-1">Ask “What can you do?” <span aria-hidden="true">↗</span></a>
+              <details id="prompt-details" hidden><summary>Preview your opening prompt</summary><p id="prompt-preview"></p></details>
+            </div>
+          </li>
+        </ol>
+        <p class="launch-note">Buttons open the <a href="https://github.com/copilot">GitHub Copilot desktop app</a>; confirm each step there before continuing. No sign-in or tokens — marketplace data is fetched directly from GitHub in your browser.</p>
+      </section>
       <noscript><p class="notice error">JavaScript is required to fetch marketplace manifests and create the Copilot launch links. Enable JavaScript to use this page.</p></noscript>
       <footer><span>Discover. Install. Ask something.</span><a href="https://docs.github.com/en/copilot/how-tos/github-copilot-app/open-with-deep-links">How Copilot links work ↗</a><span>Independent project. Not affiliated with GitHub.</span></footer>
     </main>
