@@ -91,9 +91,12 @@ function option(value, repository, title, stars, description) {
   heading.className = "option-heading";
   const name = document.createElement("strong");
   name.textContent = title;
+  name.title = title;
   const source = document.createElement("small");
-  source.textContent = `${repository} /`;
-  heading.append(source, name);
+  source.className = "repository";
+  source.textContent = `· ${repository}`;
+  source.title = repository;
+  heading.append(name, source);
   if (stars) {
     const reputation = document.createElement("small");
     reputation.className = "stars";
