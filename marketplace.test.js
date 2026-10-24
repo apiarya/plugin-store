@@ -170,7 +170,7 @@ test("page has accessible labels, initially disabled links, no prefilled target,
 });
 
 test("search queries and plugin matching", () => {
-  assert.deepEqual(searchQueries("postgres"), ["postgres", "postgres plugin"]);
+  assert.deepEqual(searchQueries("postgres"), ["postgres", "user:postgres", "postgres plugin"]);
   assert.deepEqual(searchQueries('a:b "c"'), ["a b c", "a b c plugin"]);
   assert.ok(matchesTerm({ name: "pg-tools", description: "Postgres helpers" }, "postgres"));
   assert.ok(!matchesTerm({ name: "pg-tools", description: "Postgres helpers" }, "mysql"));
@@ -194,6 +194,7 @@ test("findMarketplaces keeps only repositories with valid manifests in GitHub or
       requests.push(url);
       if (url.startsWith("https://api.github.com/search/repositories")) {
         const query = new URL(url).searchParams.get("q");
+        if (query === "user:postgres") return jsonResponse({ message: "Validation Failed" }, 422);
         if (query === "postgres plugin") {
           return jsonResponse({ items: [
             { full_name: "B/Two", default_branch: "trunk", stargazers_count: 3 },

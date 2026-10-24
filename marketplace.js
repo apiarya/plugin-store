@@ -124,7 +124,9 @@ export function pluginLinks(repository, marketplace, plugin, targetRepository = 
 
 export function searchQueries(term) {
   const words = term.replace(/[^\w.\s-]+/g, " ").replace(/\s+/g, " ").trim();
-  return [words, `${words} plugin`];
+  const queries = [words, `${words} plugin`];
+  if (/^[a-z\d](?:[a-z\d-]{0,38})$/i.test(words)) queries.splice(1, 0, `user:${words}`);
+  return queries;
 }
 
 async function searchRepositories(query, fetchImpl, signal, limit) {
