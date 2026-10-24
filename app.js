@@ -10,7 +10,6 @@ const status = byID("search-status");
 const options = byID("result-options");
 const more = byID("more-results");
 const actions = byID("actions");
-const marketplaceBrowser = byID("marketplace-browser");
 const marketplaceFilter = byID("marketplace-filter");
 const marketplacePlugins = byID("marketplace-plugins");
 let results = [];
@@ -151,7 +150,6 @@ function filterMarketplace() {
 function renderMarketplace() {
   const result = selected();
   marketplaceFilter.value = "";
-  marketplaceBrowser.open = false;
   marketplacePlugins.replaceChildren();
   if (!result) return;
   const { marketplace } = result;

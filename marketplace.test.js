@@ -158,6 +158,8 @@ test("page has accessible labels, initially disabled links, and safe rendering",
   }
   assert.match(html, /<div id="result-options" class="result-list" role="radiogroup"/);
   assert.match(html, /role="status" aria-live="polite"/);
+  assert.match(html, /for="search-term">Search marketplaces by repository, owner, or keyword<\/label>/);
+  assert.match(html, /placeholder="Search marketplaces by repository, owner, or keyword"/);
   assert.ok(!html.includes("target-repo"));
   assert.equal((html.match(/aria-disabled="true" tabindex="-1"/g) ?? []).length, 3);
   assert.ok(!script.includes("innerHTML"));
