@@ -186,14 +186,14 @@ test("double-encodes marketplace and plugin links according to the documented wr
   assert.equal(new URL(new URL(workiq.plugin).searchParams.get("open")).searchParams.get("source"), "workiq@work-iq");
 });
 
-test("session links open in the plugin-store repository with only documented parameters", () => {
+test("session links open in the hello-world example repository with only documented parameters", () => {
   const links = pluginLinks("anthropics/life-sciences", "life-sciences", "clinical-trial-protocol");
   const appLink = new URL(new URL(links.session).searchParams.get("open"));
   assert.equal(appLink.protocol, "ghapp:");
   assert.equal(appLink.hostname, "session");
   assert.equal(appLink.pathname, "/new");
   assert.deepEqual([...appLink.searchParams.keys()], ["repo", "mode", "prompt"]);
-  assert.equal(appLink.searchParams.get("repo"), "apiarya/plugin-store");
+  assert.equal(appLink.searchParams.get("repo"), "apiarya/hello-world-example");
   assert.equal(appLink.searchParams.get("mode"), "interactive");
   assert.equal(appLink.searchParams.get("prompt"), "Use the clinical-trial-protocol@life-sciences plugin. What can you do?");
   assert.throws(() => pluginLinks("owner/repo", "invalid@marketplace", "plugin"));

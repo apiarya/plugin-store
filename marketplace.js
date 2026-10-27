@@ -138,7 +138,7 @@ export function launchLink(path, values) {
   return `https://github.com/copilot/app/launch?open=${encodeURIComponent(`ghapp://${path}?${query}`)}`;
 }
 
-export const SESSION_REPOSITORY = "apiarya/plugin-store";
+export const SESSION_REPOSITORY = "apiarya/hello-world-example";
 
 export function pluginLinks(repository, marketplace, plugin) {
   const source = parseRepository(repository);
